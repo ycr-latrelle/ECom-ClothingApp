@@ -6,6 +6,8 @@ import CartDrawer from './components/CartDrawer/CartDrawer.jsx';
 import Home from './pages/Home/Home.jsx';
 import Shop from './pages/Shop/Shop.jsx';
 import About from './pages/About/About.jsx';
+import Journal from './pages/Journal/Journal.jsx';
+import JournalArticle from './pages/JournalArticle/JournalArticle.jsx';
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/pre-order" element={<Shop preorderOnly />} />
           <Route path="/about" element={<About />} />
+          <Route path="/journal" element={<Journal />} />
+          <Route path="/journal/:slug" element={<JournalArticle />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <SiteFooter />
