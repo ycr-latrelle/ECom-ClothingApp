@@ -146,13 +146,18 @@
 }
 
 .shop-toolbar {
+  /* stays pinned under the sticky site header while the grid scrolls */
+  position: sticky;
+  top: var(--header-h);
+  z-index: 40; /* below the header (50), above the product cards */
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 28px;
-  padding-bottom: 18px;
+  margin: 0 calc(var(--page-gutter) * -1) 28px;
+  padding: 14px var(--page-gutter);
+  background: var(--color-paper);
   border-bottom: 1px solid var(--color-line);
 }
 
