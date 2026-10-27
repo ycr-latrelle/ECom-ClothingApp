@@ -55,8 +55,8 @@
   text-transform: uppercase;
 }
 
-.product-tag.is-ready { background: #e4dcf5; color: #4b3a8f; }
-.product-tag.is-preorder { background: #ece8df; color: var(--color-ink); }
+.product-tag.is-ready { background: rgba(23, 42, 57, 0.08); color: var(--color-navy); }
+.product-tag.is-preorder { background: var(--color-coral-deep); color: white; }
 
 
 .product-card-add {

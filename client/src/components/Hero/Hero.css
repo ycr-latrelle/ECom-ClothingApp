@@ -2,7 +2,7 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  min-height: min(700px, calc(100vh - 72px));
+  min-height: min(740px, 100vh);
   overflow: hidden;
   color: white;
   background:
@@ -17,7 +17,7 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: clamp(48px, 7vw, 96px) 28px clamp(40px, 5vw, 64px) var(--page-gutter);
+  padding: calc(var(--header-h) + clamp(32px, 5vw, 64px)) 28px clamp(40px, 5vw, 64px) var(--page-gutter);
 }
 
 .hero-copy .eyebrow {
@@ -68,11 +68,11 @@
 
 .button-primary {
   color: white;
-  background: var(--color-coral);
+  background: var(--color-coral-deep);
 }
 
 .button-primary:hover {
-  background: #e84a31;
+  background: #bf3320;
 }
 
 .button-outline {
@@ -179,7 +179,7 @@
   padding: 44px 18px 24px 22px;
   display: flex;
   flex-direction: column;
-  background: var(--color-coral);
+  background: var(--color-coral-deep);
   clip-path: polygon(0 7%, 100% 0, 100% 100%, 0 100%);
   color: white;
 }
@@ -238,7 +238,7 @@
   }
 
   .hero-copy {
-    padding: 44px var(--page-gutter) 12px;
+    padding: calc(var(--header-h) + 28px) var(--page-gutter) 12px;
   }
 
   .hero-copy h1 {

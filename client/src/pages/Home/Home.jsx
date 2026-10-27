@@ -8,10 +8,10 @@ import { products } from '../../data/products.js';
 import './Home.css';
 
 const categories = [
-  { name: 'Tops', image: '/images/tops-image.png', to: '/shop' },
-  { name: 'Bottoms', image: '/images/bottoms-image.png', to: '/shop' },
-  { name: 'Footwear', image: '/images/footwear-image.png', to: '/shop' },
-  { name: 'Accessories', image: '/images/accessories-image.png', to: '/shop' },
+  { name: 'Tops', image: '/images/tops-image.png', to: '/shop?category=tops' },
+  { name: 'Bottoms', image: '/images/bottoms-image.png', to: '/shop?category=bottoms' },
+  { name: 'Footwear', image: '/images/footwear-image.png', to: '/shop?category=footwear' },
+  { name: 'Accessories', image: '/images/accessories-image.png', to: '/shop?category=accessories' },
   { name: 'Pre-order', image: '/images/pre-order-image.png', to: '/pre-order' },
 ];
 

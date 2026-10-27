@@ -1,4 +1,12 @@
+:root {
+  --header-h: 72px;
+}
+
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  transition: background-color 250ms ease, border-color 250ms ease;
   min-height: 72px;
   padding: 0 var(--page-gutter);
   display: grid;
@@ -73,7 +81,7 @@
   place-items: center;
   border-radius: 50%;
   color: white;
-  background: var(--color-coral);
+  background: var(--color-coral-deep);
   font-size: 9px;
 }
 
@@ -113,4 +121,54 @@ button.header-icon {
   background: none;
   cursor: pointer;
   line-height: inherit;
+}
+
+
+/* Home page: header floats over the hero */
+.site-header.is-floating {
+  position: fixed;
+  right: 0;
+  left: 0;
+}
+
+.site-header.is-transparent {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+.site-header.is-dark {
+  background: var(--color-navy);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.site-header.is-floating .site-brand,
+.site-header.is-floating .header-icon,
+.site-header.is-floating .site-nav-link.active {
+  color: white;
+}
+
+.site-header.is-floating .site-nav-link {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.site-header.is-floating .site-nav-link.active {
+  color: white;
+}
+
+.site-header a:focus-visible,
+.site-header button:focus-visible {
+  outline: 2px solid var(--color-coral);
+  outline-offset: 3px;
+}
+
+@media (max-width: 680px) {
+  :root {
+    --header-h: 122px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    transition: none;
+  }
 }

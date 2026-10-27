@@ -1,4 +1,5 @@
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import './SiteHeader.css';
 
@@ -12,9 +13,23 @@ const links = [
 
 export default function SiteHeader() {
   const { count, openCart } = useCart();
+  const isHome = useLocation().pathname === '/';
+  const [scrolled, setScrolled] = useState(() => window.scrollY > 40);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const className = [
+    'site-header',
+    isHome && 'is-floating',
+    isHome && (scrolled ? 'is-dark' : 'is-transparent'),
+  ].filter(Boolean).join(' ');
 
   return (
-    <header className="site-header">
+    <header className={className}>
       <Link className="site-brand" to="/">THREAD / THEORY</Link>
 
       <nav className="site-nav" aria-label="Main navigation">

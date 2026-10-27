@@ -4,6 +4,7 @@
   --color-navy: #172a39;
   --color-cream: #e9e4e0;
   --color-coral: #fc563c;
+  --color-coral-deep: #d93a22; /* white text on this passes 4.5:1 */
   --color-gray: #6e7575;
   --color-paper: #f8f7f4;
   --color-ink: #17212b;
