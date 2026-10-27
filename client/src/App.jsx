@@ -5,6 +5,7 @@ import SiteFooter from './components/SiteFooter/SiteFooter.jsx';
 import CartDrawer from './components/CartDrawer/CartDrawer.jsx';
 import Home from './pages/Home/Home.jsx';
 import Shop from './pages/Shop/Shop.jsx';
+import About from './pages/About/About.jsx';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/pre-order" element={<Shop preorderOnly />} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <SiteFooter />

@@ -10,6 +10,7 @@ const FILTERS = [
   ['bottoms', 'Bottoms'],
   ['footwear', 'Footwear'],
   ['accessories', 'Accessories'],
+  ['ready', 'Ready stock'],
   ['pre-order', 'Pre-order'],
 ];
 
@@ -33,6 +34,7 @@ export default function Shop({ preorderOnly = false }) {
     const list = products.filter((p) => {
       if (category === 'all') return true;
       if (category === 'pre-order') return p.status === 'pre-order';
+      if (category === 'ready') return p.status === 'ready';
       return p.category === category;
     });
     return [...list].sort(SORTS[sort].fn);
@@ -72,7 +74,7 @@ export default function Shop({ preorderOnly = false }) {
         <div className="shop-hero-visual" aria-hidden="true">
           <div className="shop-hero-wall" />
           <div className="shop-hero-accent" />
-          <img src="/images/hero-image-1.png" alt="" />
+          <img src="/images/hero-image.png" alt="" />
         </div>
 
         <span className="shop-hero-ghost" aria-hidden="true">{title}</span>
