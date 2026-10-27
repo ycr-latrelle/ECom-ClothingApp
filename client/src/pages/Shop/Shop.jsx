@@ -74,7 +74,7 @@ export default function Shop({ preorderOnly = false }) {
         <div className="shop-hero-visual" aria-hidden="true">
           <div className="shop-hero-wall" />
           <div className="shop-hero-accent" />
-          <img src="/images/hero-image.png" alt="" />
+          <img src="/images/hero-image-1.png" alt="" />
         </div>
 
         <span className="shop-hero-ghost" aria-hidden="true">{title}</span>
