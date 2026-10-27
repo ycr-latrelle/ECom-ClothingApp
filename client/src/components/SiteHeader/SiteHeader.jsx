@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useCart } from '../../context/useCart.js';
 import './SiteHeader.css';
 
 const links = [
@@ -10,6 +11,8 @@ const links = [
 ];
 
 export default function SiteHeader() {
+  const { count, openCart } = useCart();
+
   return (
     <header className="site-header">
       <Link className="site-brand" to="/">THREAD / THEORY</Link>
@@ -30,9 +33,14 @@ export default function SiteHeader() {
       <div className="site-header-actions">
         <Link to="/shop" className="header-icon" aria-label="Search products">⌕</Link>
         <Link to="/account" className="header-icon" aria-label="Your account">♙</Link>
-        <Link to="/cart" className="header-icon bag-icon" aria-label="Shopping cart">
-          ♧<span>0</span>
-        </Link>
+        <button
+          type="button"
+          className="header-icon bag-icon"
+          aria-label={`Open shopping cart, ${count} items`}
+          onClick={openCart}
+        >
+          ♧{count > 0 && <span>{count}</span>}
+        </button>
       </div>
     </header>
   );

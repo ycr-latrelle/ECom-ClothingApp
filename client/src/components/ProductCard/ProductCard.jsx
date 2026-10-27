@@ -1,8 +1,16 @@
+import { useCart } from '../../context/useCart.js';
 import { formatPeso } from '../../data/products.js';
 import './ProductCard.css';
 
-export default function ProductCard({ name, price, image, status }) {
+export default function ProductCard({ id, name, price, image, status }) {
+  const { addItem, openCart } = useCart();
   const preorder = status === 'pre-order';
+
+  const handleAdd = () => {
+    addItem({ id, name, price, image, status });
+    openCart();
+  };
+
   return (
     <article className="product-card">
       <div className="product-card-media">
@@ -14,6 +22,9 @@ export default function ProductCard({ name, price, image, status }) {
       <span className={`product-tag ${preorder ? 'is-preorder' : 'is-ready'}`}>
         {preorder ? 'Pre-order' : 'Ready stock'}
       </span>
+      <button type="button" className="product-card-add" onClick={handleAdd}>
+        {preorder ? 'Pre-order now' : 'Add to cart'}
+      </button>
     </article>
   );
 }

@@ -57,3 +57,30 @@
 
 .product-tag.is-ready { background: #e4dcf5; color: #4b3a8f; }
 .product-tag.is-preorder { background: #ece8df; color: var(--color-ink); }
+
+
+.product-card-add {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  min-height: 38px;
+  border: 1px solid var(--color-navy);
+  background: transparent;
+  color: var(--color-navy);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.product-card-add:hover {
+  color: white;
+  background: var(--color-navy);
+}
+
+.product-card-add:focus-visible {
+  outline: 2px solid var(--color-coral);
+  outline-offset: 2px;
+}
