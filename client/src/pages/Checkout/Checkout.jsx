@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { createOrder } from '../../api/orderApi.js';
+import DeliveryLocationPicker from '../../components/DeliveryLocationPicker/DeliveryLocationPicker.jsx';
 import { useAuth } from '../../context/useAuth.js';
 import { useCart } from '../../context/useCart.js';
 import { formatPeso } from '../../data/products.js';
-import DeliveryLocationPicker from '../../components/DeliveryLocationPicker/DeliveryLocationPicker.jsx';
 import './Checkout.css';
 
-const PREVIEW_ORDER_KEY = 'thread-theory-checkout-preview';
+const ORDER_SUMMARY_KEY = 'thread-theory-order-summary';
 
 function totalFor(items) {
   return items.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -19,18 +20,17 @@ export default function Checkout() {
 
   const { selectedItems, depositPercent, removeItem } = useCart();
   const { user, profile } = useAuth();
+
   const fullName = profile
     ? `${profile.firstName} ${profile.lastName}`
     : (user?.displayName ?? '');
   const address = profile?.address;
-
   const items = directItem ? [directItem] : selectedItems;
 
-  const [paymentMethod, setPaymentMethod] = useState('GCash');
-  const [proofName, setProofName] = useState('');
-  const [proofError, setProofError] = useState('');
   const [deliveryPin, setDeliveryPin] = useState(null);
   const [pinError, setPinError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const readyItems = items.filter((item) => item.status !== 'pre-order');
   const preorderItems = items.filter((item) => item.status === 'pre-order');
@@ -41,21 +41,7 @@ export default function Checkout() {
   const dueToday = readySubtotal + deposit;
   const balanceLater = preorderSubtotal - deposit;
 
-  function handleProofChange(event) {
-    const file = event.target.files?.[0];
-
-    if (file && file.size > 5 * 1024 * 1024) {
-      event.target.value = '';
-      setProofName('');
-      setProofError('Choose an image smaller than 5 MB.');
-      return;
-    }
-
-    setProofName(file?.name ?? '');
-    setProofError('');
-  }
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!deliveryPin) {
@@ -66,47 +52,75 @@ export default function Checkout() {
       return;
     }
 
-    const order = {
-      id: `PREVIEW-${Date.now().toString(36).toUpperCase()}`,
-      createdAt: new Date().toISOString(),
-      paymentMethod,
-      deliveryLocation: {
-        latitude: deliveryPin.latitude,
-        longitude: deliveryPin.longitude,
-        accuracyMeters: deliveryPin.accuracyMeters,
-        source: deliveryPin.source,
-      },
-      items: items.map(({ id, name, price, image, size, qty, status }) => ({
-        id,
-        name,
-        price,
-        image,
-        size,
-        qty,
-        status,
+    const formData = new FormData(event.currentTarget);
+    const value = (name) => String(formData.get(name) ?? '').trim();
+
+    const orderRequest = {
+      customerFullName: value('fullName'),
+      customerEmail: value('email'),
+      mobileNumber: value('phone'),
+      streetAddress: value('street'),
+      barangay: value('barangay'),
+      cityMunicipality: value('city'),
+      province: value('province'),
+      postalCode: value('postalCode'),
+      deliveryNotes: value('deliveryNotes') || null,
+      deliveryLatitude: deliveryPin.latitude,
+      deliveryLongitude: deliveryPin.longitude,
+      deliveryAccuracyMeters: deliveryPin.accuracyMeters ?? null,
+      items: items.map((item) => ({
+        productId: item.id,
+        quantity: Number(item.qty),
+        size: item.size || null,
       })),
-      totals: {
-        readySubtotal,
-        preorderSubtotal,
-        deposit,
-        dueToday,
-        balanceLater,
-        depositPercent,
-      },
     };
 
-    // This is only a temporary browser preview; it does not send an order to the store.
+    setIsSubmitting(true);
+    setSubmitError('');
+
     try {
-      sessionStorage.setItem(PREVIEW_ORDER_KEY, JSON.stringify(order));
-    } catch {
-      // The confirmation screen can still use router state if storage is unavailable.
-    }
+      const result = await createOrder(user, orderRequest);
 
-    if (!directItem) {
-      items.forEach((item) => removeItem(item.key));
-    }
+      const orderSummary = {
+        id: result.id,
+        orderCode: result.orderCode,
+        orderStatus: result.orderStatus,
+        paymentStatus: result.paymentStatus,
+        createdAt: result.createdAt,
+        items: items.map(({ id, name, price, image, size, qty }) => ({
+          id,
+          name,
+          price,
+          image,
+          size,
+          qty,
+        })),
+        totals: {
+          dueToday: result.dueToday,
+          balanceLater: result.balanceLater,
+        },
+      };
 
-    navigate(`/order-confirmation/${order.id}`, { state: { order } });
+      try {
+        sessionStorage.setItem(ORDER_SUMMARY_KEY, JSON.stringify(orderSummary));
+      } catch {
+        // The confirmation screen can still use router state.
+      }
+
+      if (!directItem) {
+        items.forEach((item) => removeItem(item.key));
+      }
+
+      navigate(`/order-confirmation/${result.id}`, {
+        state: { order: orderSummary },
+      });
+    } catch (error) {
+      setSubmitError(
+        error.message || 'Could not create the order. Please try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (items.length === 0) {
@@ -114,8 +128,10 @@ export default function Checkout() {
       <main className="checkout-page checkout-empty">
         <p className="eyebrow">Checkout</p>
         <h1>No items selected</h1>
-        <p>Add an item to your cart, or select items in the cart before checking out.</p>
-        <Link className="checkout-button" to="/shop">Back to shop</Link>
+        <p>Add an item to your cart before checking out.</p>
+        <Link className="checkout-button" to="/shop">
+          Back to shop
+        </Link>
       </main>
     );
   }
@@ -132,11 +148,11 @@ export default function Checkout() {
       </header>
 
       <div className="checkout-preview-notice" role="status">
-        <strong>Checkout preview</strong>
+        <strong>Test order</strong>
         <span>
-          This form does not send an order or payment. Your customer details and
-          proof image are not saved. The pin is held only in this temporary browser
-          preview.
+          This saves an order record. The backend currently marks orders as test
+          data. Payment method, transaction reference, and receipt upload are not
+          submitted yet.
         </span>
       </div>
 
@@ -183,22 +199,42 @@ export default function Checkout() {
             <div className="checkout-field-grid">
               <label className="checkout-field checkout-field-wide">
                 Street address
-                <input name="street" autoComplete="address-line1" defaultValue={address?.street ?? ''} required />
+                <input
+                  name="street"
+                  autoComplete="address-line1"
+                  defaultValue={address?.street ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">
                 Barangay
-                <input name="barangay" autoComplete="address-line2" defaultValue={address?.barangay ?? ''} />
+                <input
+                  name="barangay"
+                  autoComplete="address-line2"
+                  defaultValue={address?.barangay ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">
                 City or municipality
-                <input name="city" autoComplete="address-level2" defaultValue={address?.city ?? ''} required />
+                <input
+                  name="city"
+                  autoComplete="address-level2"
+                  defaultValue={address?.city ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">
                 Province
-                <input name="province" autoComplete="address-level1" defaultValue={address?.province ?? ''} required />
+                <input
+                  name="province"
+                  autoComplete="address-level1"
+                  defaultValue={address?.province ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">
@@ -230,68 +266,28 @@ export default function Checkout() {
 
           <section className="checkout-card">
             <p className="checkout-step">03</p>
-            <h2>Payment details</h2>
+            <h2>Payment submission</h2>
             <p className="checkout-help">
-              Choose the payment method you plan to use. The store’s official QR
-              code will be added before this checkout is connected to real orders.
+              Payment method, transaction reference, and receipt upload will be
+              connected after order creation. This step saves the order record
+              only.
             </p>
-
-            <div className="checkout-methods">
-              {['GCash', 'Maya'].map((method) => (
-                <label
-                  key={method}
-                  className={`checkout-method ${paymentMethod === method ? 'is-selected' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={method}
-                    checked={paymentMethod === method}
-                    onChange={() => setPaymentMethod(method)}
-                  />
-                  <span>{method}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="checkout-qr-placeholder">
-              <strong>{paymentMethod} QR code</strong>
-              <span>Official store QR image will appear here.</span>
-            </div>
-
-            <div className="checkout-field-grid">
-              <label className="checkout-field">
-                Sender name
-                <input name="senderName" type="text" required />
-              </label>
-
-              <label className="checkout-field">
-                Payment reference number
-                <input name="paymentReference" type="text" required />
-              </label>
-
-              <label className="checkout-field checkout-field-wide">
-                Proof of payment screenshot
-                <input
-                  name="paymentProof"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={handleProofChange}
-                  required
-                />
-                <span className="checkout-file-note">
-                  Image only, up to 5 MB. The preview will not upload this file.
-                </span>
-                {proofName && <span className="checkout-file-name">{proofName}</span>}
-                {proofError && (
-                  <span className="checkout-error" role="alert">{proofError}</span>
-                )}
-              </label>
-            </div>
           </section>
 
-          <button className="checkout-button checkout-submit" type="submit">
-            Create preview order · {formatPeso(dueToday)} due today
+          {submitError && (
+            <p className="checkout-error" role="alert">
+              {submitError}
+            </p>
+          )}
+
+          <button
+            className="checkout-button checkout-submit"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? 'Saving test order…'
+              : `Create test order · ${formatPeso(dueToday)} due today`}
           </button>
         </form>
 
@@ -349,12 +345,13 @@ export default function Checkout() {
           </dl>
 
           <p className="checkout-shipping-note">
-            Shipping is not included in this preview. Ready-stock delivery fees
-            will be confirmed separately; pre-order delivery fees are due when the
-            items arrive.
+            Shipping is not included yet. Delivery fees will be confirmed
+            separately.
           </p>
 
-          <Link className="checkout-back-link" to="/shop">Continue shopping</Link>
+          <Link className="checkout-back-link" to="/shop">
+            Continue shopping
+          </Link>
         </aside>
       </div>
     </main>

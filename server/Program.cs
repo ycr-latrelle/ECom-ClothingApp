@@ -7,8 +7,14 @@ using server.Api.Authentication;
 using server.Api.Data;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using server.Api.Health;
+using server.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpClient<TelegramReceiptService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 const string ClientCorsPolicy = "ClientCorsPolicy";
 
@@ -85,6 +91,7 @@ builder.Services
 builder.Services.AddScoped<CustomerProfileRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<PaymentSubmissionRepository>();
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 builder.Services

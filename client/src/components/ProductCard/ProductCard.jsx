@@ -1,20 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../../context/useCart.js';
-import { formatPeso, sizesFor } from '../../data/products.js';
+import { formatPeso } from '../../data/products.js';
 import './ProductCard.css';
 
-export default function ProductCard({ id, name, price, image, category, status }) {
+export default function ProductCard({
+  id,
+  name,
+  price,
+  image,
+  category,
+  status,
+  sizes = [],
+}) {
   const { addItem, openQuickCheckout } = useCart();
   const preorder = status === 'pre-order';
-  const sizes = sizesFor(category);
 
   const [added, setAdded] = useState(false);
   const timer = useRef(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // sizes are picked in the floating window, so the card layout never changes
-  const item = { id, name, price, image, category, status };
+  // Sizes come from the product record returned by the API.
+  const item = { id, name, price, image, category, status, sizes };
 
   const handleCheckout = () => openQuickCheckout(item, 'checkout');
 
@@ -34,10 +41,18 @@ export default function ProductCard({ id, name, price, image, category, status }
     <article className="product-card">
       <div className="product-card-media">
         <img src={image} alt={name} loading="lazy" />
-        <button type="button" className="product-card-save" aria-label={`Save ${name}`}>♡</button>
+        <button
+          type="button"
+          className="product-card-save"
+          aria-label={`Save ${name}`}
+        >
+          ♡
+        </button>
       </div>
+
       <h3>{name}</h3>
       <p className="product-card-price">{formatPeso(price)}</p>
+
       <span className={`product-tag ${preorder ? 'is-preorder' : 'is-ready'}`}>
         {preorder ? 'Pre-order' : 'Ready stock'}
       </span>
@@ -56,11 +71,17 @@ export default function ProductCard({ id, name, price, image, category, status }
                 </svg>
                 Added
               </>
-            ) : 'Add to cart'}
+            ) : (
+              'Add to cart'
+            )}
           </span>
         </button>
 
-        <button type="button" className="product-card-checkout" onClick={handleCheckout}>
+        <button
+          type="button"
+          className="product-card-checkout"
+          onClick={handleCheckout}
+        >
           Check out
         </button>
       </div>

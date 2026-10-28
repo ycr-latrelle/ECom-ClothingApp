@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import { MAX_QTY } from '../../context/cart-context.js';
-import { formatPeso, sizesFor } from '../../data/products.js';
+import { formatPeso } from '../../data/products.js';
 import './QuickCheckout.css';
 
 const FOCUSABLE = 'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -15,7 +15,7 @@ function Panel({ item, mode }) {
   const [size, setSize] = useState(null);
   const [needSize, setNeedSize] = useState(false);
 
-  const sizes = sizesFor(item.category);
+  const sizes = Array.isArray(item.sizes) ? item.sizes : [];
   const addMode = mode === 'cart';
   const preorder = item.status === 'pre-order';
   const total = item.price * qty;
