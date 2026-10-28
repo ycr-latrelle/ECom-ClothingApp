@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso } from '../../data/products.js';
@@ -20,6 +20,7 @@ function CartLine({ item }) {
         onChange={() => toggleItem(item.key)}
         aria-label={`Include ${item.name}${item.size ? `, size ${item.size}` : ''} in checkout`}
       />
+
       <img src={item.image} alt="" />
 
       <div className="cart-item-info">
@@ -31,11 +32,15 @@ function CartLine({ item }) {
           <button
             type="button"
             onClick={() => decrease(item.key)}
-            aria-label={item.qty === 1 ? `Remove ${item.name}` : `Decrease quantity of ${item.name}`}
+            aria-label={item.qty === 1
+              ? `Remove ${item.name}`
+              : `Decrease quantity of ${item.name}`}
           >
             −
           </button>
+
           <span aria-live="polite">{item.qty}</span>
+
           <button
             type="button"
             onClick={() => increase(item.key)}
@@ -45,10 +50,15 @@ function CartLine({ item }) {
             +
           </button>
         </div>
+
         {atMax && <p className="cart-max">Maximum of {MAX_QTY} per item.</p>}
       </div>
 
-      <button type="button" className="cart-remove" onClick={() => removeItem(item.key)}>
+      <button
+        type="button"
+        className="cart-remove"
+        onClick={() => removeItem(item.key)}
+      >
         Remove
       </button>
     </li>
@@ -64,6 +74,7 @@ function CartSection({ title, note, items }) {
         <h3>{title}</h3>
         {note && <span>{note}</span>}
       </div>
+
       <ul className="cart-list">
         {items.map((item) => (
           <CartLine key={item.key} item={item} />
@@ -74,11 +85,28 @@ function CartSection({ title, note, items }) {
 }
 
 export default function CartDrawer() {
+  const navigate = useNavigate();
+
   const {
-    items, readyItems, preorderItems, isOpen, closeCart, count,
-    selectedCount, allSelected, setAllSelected, hasReadySelected, hasPreorderSelected,
-    readySubtotal, preorderSubtotal, depositPercent, deposit, dueNow, balanceLater,
+    items,
+    readyItems,
+    preorderItems,
+    isOpen,
+    closeCart,
+    count,
+    selectedCount,
+    allSelected,
+    setAllSelected,
+    hasReadySelected,
+    hasPreorderSelected,
+    readySubtotal,
+    preorderSubtotal,
+    depositPercent,
+    deposit,
+    dueNow,
+    balanceLater,
   } = useCart();
+
   const panelRef = useRef(null);
   const closeRef = useRef(null);
 
@@ -87,24 +115,25 @@ export default function CartDrawer() {
 
     const opener = document.activeElement;
 
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
         closeCart();
         return;
       }
-      if (e.key !== 'Tab' || !panelRef.current) return;
 
-      // keep Tab and Shift+Tab inside the open drawer
+      if (event.key !== 'Tab' || !panelRef.current) return;
+
       const focusable = [...panelRef.current.querySelectorAll(FOCUSABLE)];
       if (focusable.length === 0) return;
+
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
 
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
         last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
         first.focus();
       }
     };
@@ -116,15 +145,20 @@ export default function CartDrawer() {
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
-      opener?.focus?.(); // hand focus back to the button that opened the cart
+      opener?.focus?.();
     };
   }, [isOpen, closeCart]);
 
-  const hasPreorder = hasPreorderSelected;
   const nothingSelected = selectedCount === 0;
 
+  const handleCheckout = () => {
+    if (nothingSelected) return;
+
+    closeCart();
+    navigate('/checkout');
+  };
+
   return (
-    // `inert` keeps the closed drawer out of the tab order and screen readers
     <div className={`cart-drawer ${isOpen ? 'is-open' : ''}`} inert={!isOpen}>
       <div className="cart-overlay" onClick={closeCart} />
 
@@ -137,7 +171,14 @@ export default function CartDrawer() {
       >
         <header className="cart-header">
           <h2>Your cart ({count})</h2>
-          <button ref={closeRef} type="button" onClick={closeCart} aria-label="Close cart">✕</button>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={closeCart}
+            aria-label="Close cart"
+          >
+            ✕
+          </button>
         </header>
 
         {items.length === 0 ? (
@@ -154,7 +195,7 @@ export default function CartDrawer() {
                 type="checkbox"
                 className="cart-check"
                 checked={allSelected}
-                onChange={(e) => setAllSelected(e.target.checked)}
+                onChange={(event) => setAllSelected(event.target.checked)}
               />
               Select all items
             </label>
@@ -176,7 +217,8 @@ export default function CartDrawer() {
                     <dd>{formatPeso(readySubtotal)}</dd>
                   </div>
                 )}
-                {hasPreorder && (
+
+                {hasPreorderSelected && (
                   <>
                     <div>
                       <dt>Pre-order total</dt>
@@ -188,11 +230,13 @@ export default function CartDrawer() {
                     </div>
                   </>
                 )}
+
                 <div className="cart-due">
                   <dt>Due today</dt>
                   <dd>{formatPeso(dueNow)}</dd>
                 </div>
-                {hasPreorder && (
+
+                {hasPreorderSelected && (
                   <div>
                     <dt>Pre-order balance, due on arrival</dt>
                     <dd>{formatPeso(balanceLater)}</dd>
@@ -205,13 +249,19 @@ export default function CartDrawer() {
                   Tick at least one item to check out.
                 </p>
               )}
+
               <p>
-                {hasPreorder
+                {hasPreorderSelected
                   ? 'The pre-order balance and delivery fee are paid once your item arrives. Shipping for ready stock is calculated at checkout.'
                   : 'Shipping is calculated at checkout.'}
               </p>
-              {/* TODO: connect to your checkout page / payment flow */}
-              <button type="button" className="button cart-checkout" disabled={nothingSelected}>
+
+              <button
+                type="button"
+                className="button cart-checkout"
+                disabled={nothingSelected}
+                onClick={handleCheckout}
+              >
                 Checkout ({selectedCount})
               </button>
             </footer>

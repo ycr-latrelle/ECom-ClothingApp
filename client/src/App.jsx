@@ -9,6 +9,8 @@ import Shop from './pages/Shop/Shop.jsx';
 import About from './pages/About/About.jsx';
 import Journal from './pages/Journal/Journal.jsx';
 import JournalArticle from './pages/JournalArticle/JournalArticle.jsx';
+import Checkout from './pages/Checkout/Checkout.jsx';
+import OrderConfirmation from './pages/OrderConfirmation/OrderConfirmation.jsx';
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/journal" element={<Journal />} />
           <Route path="/journal/:slug" element={<JournalArticle />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <SiteFooter />

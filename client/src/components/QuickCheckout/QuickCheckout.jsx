@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso, sizesFor } from '../../data/products.js';
@@ -8,18 +9,21 @@ const FOCUSABLE = 'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"
 
 function Panel({ item, mode }) {
   const { addItem, closeQuickCheckout, depositPercent } = useCart();
+  const navigate = useNavigate();
+
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState(null);
   const [needSize, setNeedSize] = useState(false);
+
   const sizes = sizesFor(item.category);
   const addMode = mode === 'cart';
-  const panelRef = useRef(null);
-  const closeRef = useRef(null);
-
   const preorder = item.status === 'pre-order';
   const total = item.price * qty;
   const deposit = Math.round((total * depositPercent) / 100);
   const dueNow = preorder ? deposit : total;
+
+  const panelRef = useRef(null);
+  const closeRef = useRef(null);
 
   const pickSize = (value) => {
     setSize(value);
@@ -33,35 +37,64 @@ function Panel({ item, mode }) {
     }
 
     if (addMode) {
-      addItem({ id: item.id, name: item.name, price: item.price, image: item.image, status: item.status, size }, qty);
+      addItem(
+        {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          category: item.category,
+          status: item.status,
+          size,
+        },
+        qty,
+      );
+
       closeQuickCheckout();
       return;
     }
 
-    // TODO: connect to your checkout page / payment flow. Send `item`, `size` and `qty`.
+    const key = size ? `${item.id}::${size}` : item.id;
+
+    closeQuickCheckout();
+    navigate('/checkout', {
+      state: {
+        directItem: {
+          id: item.id,
+          key,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          status: item.status,
+          size,
+          qty,
+        },
+      },
+    });
   };
 
   useEffect(() => {
     const opener = document.activeElement;
 
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
         closeQuickCheckout();
         return;
       }
-      if (e.key !== 'Tab' || !panelRef.current) return;
 
-      // keep Tab and Shift+Tab inside the panel
+      if (event.key !== 'Tab' || !panelRef.current) return;
+
       const focusable = [...panelRef.current.querySelectorAll(FOCUSABLE)];
       if (focusable.length === 0) return;
+
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
 
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
         last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
         first.focus();
       }
     };
@@ -90,11 +123,19 @@ function Panel({ item, mode }) {
       >
         <header className="quick-header">
           <h2 id="quick-title">{addMode ? 'Add to cart' : 'Check out'}</h2>
-          <button ref={closeRef} type="button" onClick={closeQuickCheckout} aria-label="Close">✕</button>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={closeQuickCheckout}
+            aria-label="Close"
+          >
+            ✕
+          </button>
         </header>
 
         <div className="quick-item">
           <img src={item.image} alt="" />
+
           <div>
             <h3>{item.name}</h3>
             <p>{formatPeso(item.price)}</p>
@@ -103,29 +144,35 @@ function Panel({ item, mode }) {
             <div className="quick-qty">
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                onClick={() => setQty((current) => Math.max(1, current - 1))}
                 disabled={qty <= 1}
                 aria-label="Decrease quantity"
               >
                 −
               </button>
+
               <span aria-live="polite">{qty}</span>
+
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))}
+                onClick={() => setQty((current) => Math.min(MAX_QTY, current + 1))}
                 disabled={qty >= MAX_QTY}
                 aria-label="Increase quantity"
               >
                 +
               </button>
             </div>
-            {qty >= MAX_QTY && <p className="quick-muted">Maximum of {MAX_QTY} per item.</p>}
+
+            {qty >= MAX_QTY && (
+              <p className="quick-muted">Maximum of {MAX_QTY} per item.</p>
+            )}
           </div>
         </div>
 
         {sizes.length > 0 && (
           <fieldset className={`quick-sizes ${needSize ? 'is-missing' : ''}`}>
             <legend>Size</legend>
+
             <div>
               {sizes.map((value) => (
                 <button
@@ -139,6 +186,7 @@ function Panel({ item, mode }) {
                 </button>
               ))}
             </div>
+
             {needSize && <p role="alert">Select a size to continue.</p>}
           </fieldset>
         )}
@@ -157,16 +205,19 @@ function Panel({ item, mode }) {
                 <dt>{preorder ? 'Pre-order total' : 'Item total'}</dt>
                 <dd>{formatPeso(total)}</dd>
               </div>
+
               {preorder && (
                 <div>
                   <dt>Deposit ({depositPercent}%)</dt>
                   <dd>{formatPeso(deposit)}</dd>
                 </div>
               )}
+
               <div className="quick-due">
                 <dt>Due today</dt>
                 <dd>{formatPeso(dueNow)}</dd>
               </div>
+
               {preorder && (
                 <div>
                   <dt>Balance, due on arrival</dt>
@@ -191,8 +242,14 @@ function Panel({ item, mode }) {
   );
 }
 
-// The floating "buy this one item now" panel, opened by the Check out button on a product card.
 export default function QuickCheckout() {
   const { quickItem } = useCart();
-  return quickItem ? <Panel key={`${quickItem.id}::${quickItem.mode}`} item={quickItem} mode={quickItem.mode} /> : null;
+
+  return quickItem ? (
+    <Panel
+      key={`${quickItem.id}::${quickItem.mode}`}
+      item={quickItem}
+      mode={quickItem.mode}
+    />
+  ) : null;
 }
