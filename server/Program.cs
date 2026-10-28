@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication;
 using Npgsql;
 using server.Api.Authentication;
 using server.Api.Data;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using server.Api.Health;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +67,12 @@ builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
     return dataSourceBuilder.Build();
 });
 
+builder.Services
+    .AddHealthChecks()
+    .AddCheck<SupabaseHealthCheck>(
+        "supabase",
+        tags: new[] { "ready" });
+
 builder.Services.AddScoped<CustomerProfileRepository>();
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
@@ -89,6 +97,16 @@ app.UseHttpsRedirection();
 app.UseCors(ClientCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 app.MapControllers();
 
