@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import { formatPeso } from '../../data/products.js';
+import DeliveryLocationPicker from '../../components/DeliveryLocationPicker/DeliveryLocationPicker.jsx';
 import './Checkout.css';
 
 const PREVIEW_ORDER_KEY = 'thread-theory-checkout-preview';
@@ -16,11 +17,14 @@ export default function Checkout() {
   const directItem = location.state?.directItem;
 
   const { selectedItems, depositPercent, removeItem } = useCart();
+
   const items = directItem ? [directItem] : selectedItems;
 
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [proofName, setProofName] = useState('');
   const [proofError, setProofError] = useState('');
+  const [deliveryPin, setDeliveryPin] = useState(null);
+  const [pinError, setPinError] = useState('');
 
   const readyItems = items.filter((item) => item.status !== 'pre-order');
   const preorderItems = items.filter((item) => item.status === 'pre-order');
@@ -48,10 +52,24 @@ export default function Checkout() {
   function handleSubmit(event) {
     event.preventDefault();
 
+    if (!deliveryPin) {
+      setPinError('Select or confirm a delivery pin on the map before continuing.');
+      document
+        .querySelector('.delivery-location-picker')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     const order = {
       id: `PREVIEW-${Date.now().toString(36).toUpperCase()}`,
       createdAt: new Date().toISOString(),
       paymentMethod,
+      deliveryLocation: {
+        latitude: deliveryPin.latitude,
+        longitude: deliveryPin.longitude,
+        accuracyMeters: deliveryPin.accuracyMeters,
+        source: deliveryPin.source,
+      },
       items: items.map(({ id, name, price, image, size, qty, status }) => ({
         id,
         name,
@@ -71,8 +89,7 @@ export default function Checkout() {
       },
     };
 
-    // Store only a temporary order summary for the preview confirmation screen.
-    // Customer details, payment reference, and proof image are not saved or sent.
+    // This is only a temporary browser preview; it does not send an order to the store.
     try {
       sessionStorage.setItem(PREVIEW_ORDER_KEY, JSON.stringify(order));
     } catch {
@@ -108,8 +125,9 @@ export default function Checkout() {
       <div className="checkout-preview-notice" role="status">
         <strong>Checkout preview</strong>
         <span>
-          This form does not send an order or payment. Your details and proof image
-          are not saved.
+          This form does not send an order or payment. Your customer details and
+          proof image are not saved. The pin is held only in this temporary browser
+          preview.
         </span>
       </div>
 
@@ -164,7 +182,12 @@ export default function Checkout() {
 
               <label className="checkout-field">
                 Postal code
-                <input name="postalCode" inputMode="numeric" autoComplete="postal-code" required />
+                <input
+                  name="postalCode"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  required
+                />
               </label>
 
               <label className="checkout-field checkout-field-wide">
@@ -172,6 +195,15 @@ export default function Checkout() {
                 <textarea name="deliveryNotes" rows="3" />
               </label>
             </div>
+
+            <DeliveryLocationPicker
+              value={deliveryPin}
+              onChange={(pin) => {
+                setDeliveryPin(pin);
+                setPinError('');
+              }}
+              error={pinError}
+            />
           </section>
 
           <section className="checkout-card">
@@ -229,7 +261,9 @@ export default function Checkout() {
                   Image only, up to 5 MB. The preview will not upload this file.
                 </span>
                 {proofName && <span className="checkout-file-name">{proofName}</span>}
-                {proofError && <span className="checkout-error" role="alert">{proofError}</span>}
+                {proofError && (
+                  <span className="checkout-error" role="alert">{proofError}</span>
+                )}
               </label>
             </div>
           </section>
@@ -246,11 +280,13 @@ export default function Checkout() {
             {items.map((item) => (
               <li key={item.key ?? `${item.id}-${item.size ?? 'one-size'}`}>
                 <img src={item.image} alt="" />
+
                 <div>
                   <strong>{item.name}</strong>
                   {item.size && <span>Size {item.size}</span>}
                   <span>Qty {item.qty}</span>
                 </div>
+
                 <b>{formatPeso(item.price * item.qty)}</b>
               </li>
             ))}
@@ -292,8 +328,8 @@ export default function Checkout() {
 
           <p className="checkout-shipping-note">
             Shipping is not included in this preview. Ready-stock delivery fees
-            will be confirmed separately; pre-order delivery fees are due when
-            the items arrive.
+            will be confirmed separately; pre-order delivery fees are due when the
+            items arrive.
           </p>
 
           <Link className="checkout-back-link" to="/shop">Continue shopping</Link>
