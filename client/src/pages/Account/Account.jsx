@@ -6,7 +6,7 @@ import RegisterForm from '../../components/Account/RegisterForm.jsx';
 import ForgotPasswordForm from '../../components/Account/ForgotPasswordForm.jsx';
 import ProfileForm from '../../components/Account/ProfileForm.jsx';
 import AccountSteps from '../../components/Account/AccountSteps.jsx';
-import AccountSummary from '../../components/Account/AccountSummary.jsx';
+import ProfileScreen from '../../components/Profile/ProfileScreen.jsx';
 import './Account.css';
 
 const TITLES = {
@@ -110,8 +110,11 @@ export default function Account() {
       </>
     );
   } else if (user) {
-    content = (
-      <AccountSummary
+    // Signed in with a saved profile: the full profile screen replaces the
+    // sign-in layout.
+    return (
+      <ProfileScreen
+        key={user.uid}
         onSignedOut={() => {
           setView('signin');
           setNotice('You have been signed out.');

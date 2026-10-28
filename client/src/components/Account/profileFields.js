@@ -86,3 +86,37 @@ function ageError(value) {
   if (age > MAX_AGE) return 'Enter a valid age.';
   return undefined;
 }
+
+// ---------- helpers for showing and editing a saved profile ----------
+
+export function genderLabel(value) {
+  return GENDER_OPTIONS.find((option) => option.value === value)?.label ?? '';
+}
+
+export function fullName(profile) {
+  return [profile.firstName, profile.middleName, profile.lastName].filter(Boolean).join(' ');
+}
+
+export function formatAddress(address = {}) {
+  const place = [address.street, address.barangay, address.city, address.province]
+    .filter(Boolean)
+    .join(', ');
+  return [place, address.postalCode].filter(Boolean).join(' ');
+}
+
+// Turns a saved profile (as the auth context holds it) back into form values.
+export function profileToValues(profile) {
+  const address = profile.address ?? {};
+  return {
+    firstName: profile.firstName ?? '',
+    middleName: profile.middleName ?? '',
+    lastName: profile.lastName ?? '',
+    age: String(profile.age ?? ''),
+    gender: profile.gender ?? '',
+    street: address.street ?? '',
+    barangay: address.barangay ?? '',
+    city: address.city ?? '',
+    province: address.province ?? '',
+    postalCode: address.postalCode ?? '',
+  };
+}

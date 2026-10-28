@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/useAuth.js';
-import AccountField from './AccountField.jsx';
 import { friendlyAuthError } from './authErrors.js';
+import { AboutFields, AddressFields, NameFields } from './ProfileFieldGroups.jsx';
 import {
   EMPTY_PROFILE,
-  GENDER_OPTIONS,
   cleanProfile,
   validateProfile,
 } from './profileFields.js';
@@ -63,87 +62,9 @@ export default function ProfileForm({ onSaved }) {
         checkout will be ready for you next time.
       </p>
 
-      <fieldset className="account-fieldset">
-        <legend>Your name</legend>
-        <div className="account-grid">
-          <AccountField
-            className="span-2"
-            label="First name"
-            autoComplete="given-name"
-            {...field('firstName')}
-          />
-          <AccountField
-            className="span-2"
-            label="Middle name (optional)"
-            autoComplete="additional-name"
-            {...field('middleName')}
-          />
-          <AccountField
-            className="span-2"
-            label="Last name"
-            autoComplete="family-name"
-            {...field('lastName')}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset className="account-fieldset">
-        <legend>About you</legend>
-        <div className="account-grid">
-          <AccountField
-            className="span-3"
-            label="Age"
-            inputMode="numeric"
-            maxLength={3}
-            autoComplete="off"
-            {...field('age')}
-          />
-          <AccountField className="span-3" label="Gender" as="select" {...field('gender')}>
-            <option value="">Select…</option>
-            {GENDER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </AccountField>
-        </div>
-      </fieldset>
-
-      <fieldset className="account-fieldset">
-        <legend>Delivery address</legend>
-        <div className="account-grid">
-          <AccountField
-            className="span-6"
-            label="Street address"
-            autoComplete="address-line1"
-            {...field('street')}
-          />
-          <AccountField
-            className="span-3"
-            label="Barangay"
-            autoComplete="address-line2"
-            {...field('barangay')}
-          />
-          <AccountField
-            className="span-3"
-            label="City or municipality"
-            autoComplete="address-level2"
-            {...field('city')}
-          />
-          <AccountField
-            className="span-3"
-            label="Province"
-            autoComplete="address-level1"
-            {...field('province')}
-          />
-          <AccountField
-            className="span-3"
-            label="Postal code"
-            inputMode="numeric"
-            maxLength={4}
-            autoComplete="postal-code"
-            {...field('postalCode')}
-          />
-        </div>
-      </fieldset>
+      <NameFields field={field} />
+      <AboutFields field={field} />
+      <AddressFields field={field} />
 
       {formError && <p className="account-banner is-error" role="alert">{formError}</p>}
 

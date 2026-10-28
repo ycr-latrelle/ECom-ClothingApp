@@ -83,6 +83,8 @@ builder.Services
         tags: new[] { "ready" });
 
 builder.Services.AddScoped<CustomerProfileRepository>();
+builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 builder.Services
