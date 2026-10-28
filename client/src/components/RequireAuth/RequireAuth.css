@@ -10,3 +10,46 @@
 .require-auth-loading p {
   margin: 0;
 }
+
+.require-auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: 50vh;
+  justify-content: center;
+  padding: 48px var(--page-gutter);
+  text-align: center;
+}
+
+.require-auth-prompt h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.05em;
+}
+
+.require-auth-prompt p {
+  margin: 0 0 8px;
+  color: var(--color-gray);
+}
+
+.require-auth-button {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  color: white;
+  background: var(--color-navy);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.require-auth-button:hover { background: #0f1d29; }
+
+.require-auth-button:focus-visible {
+  outline: 2px solid var(--color-coral);
+  outline-offset: 3px;
+}

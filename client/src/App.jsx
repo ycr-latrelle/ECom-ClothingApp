@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import CartProvider from "./context/CartProvider.jsx";
+import AuthPanelProvider from "./context/AuthPanelProvider.jsx";
+import AuthPanel from "./components/AuthPanel/AuthPanel.jsx";
 import SiteHeader from "./components/SiteHeader/SiteHeader.jsx";
 import SiteFooter from "./components/SiteFooter/SiteFooter.jsx";
 import CartDrawer from "./components/CartDrawer/CartDrawer.jsx";
@@ -24,6 +26,7 @@ export default function App() {
     <BrowserRouter>
       <ProductsProvider>
         <AuthProvider>
+          <AuthPanelProvider>
           <CartProvider>
             <SiteHeader />
             <Suspense fallback={<div style={{ minHeight: "60vh" }} aria-busy="true" />}>
@@ -55,7 +58,9 @@ export default function App() {
             <SiteFooter />
             <CartDrawer />
             <QuickCheckout />
+            <AuthPanel />
           </CartProvider>
+          </AuthPanelProvider>
         </AuthProvider>
       </ProductsProvider>
     </BrowserRouter>

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthPanel } from '../../context/useAuthPanel.js';
 import { useCart } from '../../context/useCart.js';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso } from '../../data/products.js';
@@ -86,12 +87,14 @@ function CartSection({ title, note, items }) {
 
 export default function CartDrawer() {
   const navigate = useNavigate();
+  const { requireAuth } = useAuthPanel();
 
   const {
     items,
     readyItems,
     preorderItems,
     isOpen,
+    openCart,
     closeCart,
     count,
     selectedCount,
@@ -155,7 +158,11 @@ export default function CartDrawer() {
     if (nothingSelected) return;
 
     closeCart();
-    navigate('/checkout');
+    // Signed-out customers get the sign-in panel; closing it brings the cart back.
+    requireAuth(() => navigate('/checkout'), {
+      reason: 'Sign in or create an account to continue to checkout.',
+      onCancel: openCart,
+    });
   };
 
   return (

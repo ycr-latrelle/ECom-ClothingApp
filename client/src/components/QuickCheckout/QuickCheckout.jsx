@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthPanel } from '../../context/useAuthPanel.js';
 import { useCart } from '../../context/useCart.js';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso } from '../../data/products.js';
@@ -10,6 +11,7 @@ const FOCUSABLE = 'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"
 function Panel({ item, mode }) {
   const { addItem, closeQuickCheckout, depositPercent } = useCart();
   const navigate = useNavigate();
+  const { requireAuth } = useAuthPanel();
 
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState(null);
@@ -56,20 +58,20 @@ function Panel({ item, mode }) {
 
     const key = size ? `${item.id}::${size}` : item.id;
 
+    const directItem = {
+      id: item.id,
+      key,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      status: item.status,
+      size,
+      qty,
+    };
+
     closeQuickCheckout();
-    navigate('/checkout', {
-      state: {
-        directItem: {
-          id: item.id,
-          key,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          status: item.status,
-          size,
-          qty,
-        },
-      },
+    requireAuth(() => navigate('/checkout', { state: { directItem } }), {
+      reason: 'Sign in or create an account to continue to checkout.',
     });
   };
 
