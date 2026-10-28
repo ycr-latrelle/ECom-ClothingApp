@@ -148,7 +148,8 @@
 .shop-toolbar {
   /* stays pinned under the sticky site header while the grid scrolls */
   position: sticky;
-  top: var(--header-h);
+  /* real header height (measured in SiteHeader); -1px hides any sub-pixel seam */
+  top: calc(var(--header-live-h, var(--header-h)) - 1px);
   z-index: 40; /* below the header (50), above the product cards */
   display: flex;
   justify-content: space-between;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/useCart.js';
 import './SiteHeader.css';
@@ -15,6 +15,23 @@ export default function SiteHeader() {
   const { count, openCart } = useCart();
   const isHome = useLocation().pathname === '/';
   const [scrolled, setScrolled] = useState(() => window.scrollY > 40);
+  const headerRef = useRef(null);
+
+  // Publish the header's real rendered height as --header-live-h. The fixed
+  // --header-h token is only an estimate (on phones the header is a different
+  // height), so anything that sticks under the header reads this instead.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return undefined;
+
+    const publish = () =>
+      document.documentElement.style.setProperty('--header-live-h', `${el.offsetHeight}px`);
+
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -29,7 +46,7 @@ export default function SiteHeader() {
   ].filter(Boolean).join(' ');
 
   return (
-    <header className={className}>
+    <header ref={headerRef} className={className}>
       <Link className="site-brand" to="/">THREAD / THEORY</Link>
 
       <nav className="site-nav" aria-label="Main navigation">
