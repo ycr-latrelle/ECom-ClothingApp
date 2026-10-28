@@ -1,0 +1,60 @@
+/* sticks to the bottom of the viewport while the shop is on screen,
+   then scrolls away so it never covers the footer */
+.checkout-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30; /* under the header (50) and cart drawer (100) */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px var(--page-gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+  color: white;
+  background: var(--color-navy);
+  box-shadow: 0 -6px 24px rgba(15, 29, 41, 0.18);
+  animation: checkout-bar-in 260ms ease;
+}
+
+.checkout-bar p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.checkout-bar p span { color: rgba(255, 255, 255, 0.78); }
+.checkout-bar p b { color: white; }
+
+.checkout-bar-button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 24px;
+  border: 0;
+  color: white;
+  background: var(--color-coral-deep);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.checkout-bar-button:hover { background: #bf3320; }
+
+.checkout-bar-button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+@keyframes checkout-bar-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+@media (max-width: 520px) {
+  .checkout-bar p { font-size: 12px; }
+  .checkout-bar-button { padding: 0 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-bar { animation: none; }
+}

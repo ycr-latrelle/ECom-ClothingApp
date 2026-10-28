@@ -54,7 +54,7 @@ export default function SiteHeader() {
           aria-label={`Open shopping cart, ${count} items`}
           onClick={openCart}
         >
-          ♧{count > 0 && <span>{count}</span>}
+          ♧{count > 0 && <span key={count}>{count}</span>}
         </button>
       </div>
     </header>

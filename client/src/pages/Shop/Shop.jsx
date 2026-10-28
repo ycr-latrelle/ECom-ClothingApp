@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import CheckoutBar from '../../components/CheckoutBar/CheckoutBar.jsx';
 import ProductCard from '../../components/ProductCard/ProductCard.jsx';
 import { products } from '../../data/products.js';
 import './Shop.css';
@@ -74,7 +75,7 @@ export default function Shop({ preorderOnly = false }) {
         <div className="shop-hero-visual" aria-hidden="true">
           <div className="shop-hero-wall" />
           <div className="shop-hero-accent" />
-          <img src="/images/hero-image-1.png" alt="" />
+          <img src="/images/hero-image.png" alt="" />
         </div>
 
         <span className="shop-hero-ghost" aria-hidden="true">{title}</span>
@@ -121,6 +122,8 @@ export default function Shop({ preorderOnly = false }) {
           </div>
         )}
       </section>
+
+      <CheckoutBar />
     </main>
   );
 }

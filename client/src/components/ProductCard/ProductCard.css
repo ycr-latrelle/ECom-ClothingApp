@@ -59,10 +59,16 @@
 .product-tag.is-preorder { background: var(--color-coral-deep); color: white; }
 
 
-.product-card-add {
+.product-card-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.product-card-add,
+.product-card-checkout {
   display: block;
   width: 100%;
-  margin-top: 12px;
   min-height: 38px;
   border: 1px solid var(--color-navy);
   background: transparent;
@@ -82,5 +88,63 @@
 
 .product-card-add:focus-visible {
   outline: 2px solid var(--color-coral);
+  outline-offset: 2px;
+}
+
+/* ---------- added feedback ---------- */
+.product-card-add.is-added {
+  color: white;
+  border-color: var(--color-navy);
+  background: var(--color-navy);
+  animation: add-pop 380ms ease;
+}
+
+.added-check {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: check-draw 320ms 80ms ease forwards;
+}
+
+@keyframes add-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card-add.is-added,
+  .added-check { animation: none; stroke-dashoffset: 0; }
+}
+
+/* ---------- check out (buy now) ---------- */
+.product-card-checkout {
+  min-height: 38px;
+  border: 1px solid var(--color-coral-deep);
+  color: white;
+  background: var(--color-coral-deep);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.product-card-checkout:hover { background: #bf3320; }
+
+.product-card-checkout:focus-visible {
+  outline: 2px solid var(--color-navy);
   outline-offset: 2px;
 }

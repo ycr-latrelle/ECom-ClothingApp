@@ -83,6 +83,13 @@
   color: white;
   background: var(--color-coral-deep);
   font-size: 9px;
+  animation: bag-bump 360ms ease; /* replays each time the count changes (keyed span) */
+}
+
+@keyframes bag-bump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.5); }
+  100% { transform: scale(1); }
 }
 
 @media (max-width: 680px) {
@@ -168,6 +175,10 @@ button.header-icon {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .bag-icon span {
+    animation: none;
+  }
+
   .site-header {
     transition: none;
   }

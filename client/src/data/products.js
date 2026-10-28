@@ -17,4 +17,15 @@ export const products = [
   { id: 'everyday-crew-hoodie', name: 'Everyday Crew Hoodie', price: 1690, image: '/images/tops-image.png', category: 'tops', status: 'ready' },
 ];
 
+// PLACEHOLDER size ranges - adjust to what you actually stock.
+// Accessories are one-size, so they get no picker.
+const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL'];
+const SHOE_SIZES = ['39', '40', '41', '42', '43', '44'];
+
+export const sizesFor = (category) => {
+  if (category === 'tops' || category === 'bottoms') return CLOTHING_SIZES;
+  if (category === 'footwear') return SHOE_SIZES;
+  return [];
+};
+
 export const formatPeso = (n) => `₱${n.toLocaleString('en-PH')}`;
