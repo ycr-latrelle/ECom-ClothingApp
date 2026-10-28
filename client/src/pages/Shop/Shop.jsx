@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CheckoutBar from '../../components/CheckoutBar/CheckoutBar.jsx';
 import ProductCard from '../../components/ProductCard/ProductCard.jsx';
-import { useProducts } from '../../context/ProductsProvider.jsx';
+import { useProducts } from '../../context/useProducts.js';
 import './Shop.css';
 
 const FILTERS = [

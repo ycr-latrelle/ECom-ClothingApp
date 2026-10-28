@@ -10,7 +10,7 @@ import {
   getRelatedArticles,
   readingMinutes,
 } from '../../data/journal.js';
-import { products } from '../../data/products.js';
+import { useProducts } from '../../context/useProducts.js';
 import './JournalArticle.css';
 
 function Block({ block }) {
@@ -42,6 +42,7 @@ function Block({ block }) {
 export default function JournalArticle() {
   const { slug } = useParams();
   const article = getArticleBySlug(slug);
+  const { products } = useProducts();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -70,8 +71,9 @@ export default function JournalArticle() {
 
   const { title, category, author, publishedAt, cover, content, productIds } = article;
   const related = getRelatedArticles(article);
+  // productIds in journal.js must match the ids returned by the products API.
   const relatedProducts = productIds
-    .map((id) => products.find((p) => p.id === id))
+    .map((id) => products.find((p) => String(p.id) === String(id)))
     .filter(Boolean);
 
   return (

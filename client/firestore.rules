@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Each customer can read and write only their own profile document: users/{uid}.
+// Publish this in Firebase console > Firestore Database > Rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isName(value, required) {
+      return value is string
+        && value.size() <= 60
+        && (!required || value.size() > 0);
+    }
+
+    function isText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function validAddress(a) {
+      return a is map
+        && a.keys().hasOnly(['street', 'barangay', 'city', 'province', 'postalCode'])
+        && a.keys().hasAll(['street', 'barangay', 'city', 'province', 'postalCode'])
+        && isText(a.street, 120)
+        && isText(a.barangay, 80)
+        && isText(a.city, 80)
+        && isText(a.province, 80)
+        && a.postalCode is string
+        && a.postalCode.matches('^[0-9]{4}$');
+    }
+
+    function validProfile(d) {
+      return d.keys().hasOnly([
+          'firstName', 'middleName', 'lastName', 'age', 'gender',
+          'address', 'email', 'createdAt', 'updatedAt'
+        ])
+        && d.keys().hasAll([
+          'firstName', 'middleName', 'lastName', 'age', 'gender', 'address', 'email'
+        ])
+        && isName(d.firstName, true)
+        && isName(d.middleName, false)
+        && isName(d.lastName, true)
+        && d.age is int && d.age >= 13 && d.age <= 120
+        && d.gender in ['female', 'male', 'non-binary', 'prefer-not-to-say']
+        && validAddress(d.address)
+        && d.email == request.auth.token.email;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(request.resource.data);
+      allow delete: if false;
+    }
+  }
+}

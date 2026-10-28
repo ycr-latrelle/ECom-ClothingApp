@@ -43,16 +43,14 @@ function MapClickHandler({ onSelect }) {
 
 function RecenterMap({ pin }) {
   const map = useMap();
+  const latitude = pin?.latitude;
+  const longitude = pin?.longitude;
 
   useEffect(() => {
-    if (!pin) return;
+    if (latitude == null || longitude == null) return;
 
-    map.flyTo(
-      [pin.latitude, pin.longitude],
-      Math.max(map.getZoom(), 16),
-      { duration: 0.5 },
-    );
-  }, [map, pin?.latitude, pin?.longitude]);
+    map.flyTo([latitude, longitude], Math.max(map.getZoom(), 16), { duration: 0.5 });
+  }, [map, latitude, longitude]);
 
   return null;
 }

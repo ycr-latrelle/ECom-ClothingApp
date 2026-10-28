@@ -1,7 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchProducts } from '../api/productApi.js';
-
-const ProductsContext = createContext(null);
+import { ProductsContext } from './products-context.js';
 
 export default function ProductsProvider({ children }) {
   const [products, setProducts] = useState([]);
@@ -36,14 +35,4 @@ export default function ProductsProvider({ children }) {
       {children}
     </ProductsContext.Provider>
   );
-}
-
-export function useProducts() {
-  const context = useContext(ProductsContext);
-
-  if (!context) {
-    throw new Error('useProducts must be used inside ProductsProvider.');
-  }
-
-  return context;
 }

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import CartProvider from "./context/CartProvider.jsx";
 import SiteHeader from "./components/SiteHeader/SiteHeader.jsx";
@@ -9,10 +10,11 @@ import Shop from "./pages/Shop/Shop.jsx";
 import About from "./pages/About/About.jsx";
 import Journal from "./pages/Journal/Journal.jsx";
 import JournalArticle from "./pages/JournalArticle/JournalArticle.jsx";
-import Checkout from "./pages/Checkout/Checkout.jsx";
-import Account from "./pages/Account/Account.jsx";
+import Policy from "./pages/Policy/Policy.jsx";
+const Checkout = lazy(() => import("./pages/Checkout/Checkout.jsx"));
+const Account = lazy(() => import("./pages/Account/Account.jsx"));
 import RequireAuth from "./components/RequireAuth/RequireAuth.jsx";
-import OrderConfirmation from "./pages/OrderConfirmation/OrderConfirmation.jsx";
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation/OrderConfirmation.jsx"));
 
 import AuthProvider from "./context/AuthProvider.jsx";
 import ProductsProvider from "./context/ProductsProvider.jsx";
@@ -24,6 +26,7 @@ export default function App() {
         <AuthProvider>
           <CartProvider>
             <SiteHeader />
+            <Suspense fallback={<div style={{ minHeight: "60vh" }} aria-busy="true" />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/shop" element={<Shop />} />
@@ -44,8 +47,11 @@ export default function App() {
                 path="/order-confirmation/:orderId"
                 element={<OrderConfirmation />}
               />
+              <Route path="/payment-policy" element={<Policy />} />
+              <Route path="/shipping-policy" element={<Policy />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
             <SiteFooter />
             <CartDrawer />
             <QuickCheckout />

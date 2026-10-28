@@ -4,7 +4,7 @@ import Hero from "../../components/Hero/Hero.jsx";
 import CategoryCard from "../../components/CategoryCard/CategoryCard.jsx";
 import ProductCard from "../../components/ProductCard/ProductCard.jsx";
 import PromoBanner from "../../components/PromoBanner/PromoBanner.jsx";
-import { useProducts } from "../../context/ProductsProvider.jsx";
+import { useProducts } from "../../context/useProducts.js";
 import "./Home.css";
 
 const categories = [

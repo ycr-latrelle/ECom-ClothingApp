@@ -4,7 +4,7 @@
 // Article fields:
 //   slug, title, category (a key of `categories`), excerpt, author,
 //   publishedAt (YYYY-MM-DD), status ('published' | 'draft'), featured (optional),
-//   cover { src, alt }, productIds (ids from products.js),
+//   cover { src, alt }, productIds (ids from the products API),
 //   content: array of blocks:
 //     { type: 'h2', text }  { type: 'p', text }  { type: 'list', items: [] }
 //     { type: 'image', src, alt, caption? }

@@ -159,3 +159,30 @@ export const aboutContent = {
 
 export const fill = (text, vars) =>
   text.replace(/\{(\w+)\}/g, (_, key) => (vars[key] ?? `{${key}}`));
+
+// Policy pages (/payment-policy, /shipping-policy). Only confirmed facts are stated;
+// anything marked pending shows a "To be confirmed" tag until the business decides.
+export const policyContent = {
+  'payment-policy': {
+    title: 'Payment policy',
+    intro: 'How payment works for ready-stock items and pre-orders.',
+    sections: [
+      { title: 'Payment methods', text: 'We accept GCash and Maya QR. Payments are verified manually.' },
+      { title: 'Ready stock', text: 'Ready-stock items are paid in full when you place your order.' },
+      { title: 'Pre-order deposit', text: 'Pre-order items need a {depositPercent}% deposit to place your order.' },
+      { title: 'Remaining balance', text: 'The remaining balance, plus the Philippines delivery fee, is due once your pre-order item arrives. We dispatch it after that payment.' },
+      { title: 'Cancellations, refunds and returns', text: 'These policies will be confirmed and added here before they take effect.', pending: true },
+    ],
+  },
+  'shipping-policy': {
+    title: 'Shipping policy',
+    intro: 'Where we ship and when delivery fees are collected.',
+    sections: [
+      { title: 'Coverage', text: 'We ship within the Philippines.' },
+      { title: 'Delivery fees for pre-orders', text: 'The delivery fee is collected with the remaining balance once your item arrives.' },
+      { title: 'Shipping fee amounts', text: 'Shipping fee amounts will be published once they are confirmed.', pending: true },
+      { title: 'Delivery timeframes', text: 'Estimated timeframes have not been published yet. They will appear here once they are confirmed.', pending: true },
+      { title: 'Delayed or unavailable supplier orders', text: 'This policy will be confirmed and added here.', pending: true },
+    ],
+  },
+};

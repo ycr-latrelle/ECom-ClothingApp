@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { CartContext, MAX_QTY } from './cart-context.js';
-import { useProducts } from './ProductsProvider.jsx';
+import { useProducts } from './useProducts.js';
 import { aboutContent } from '../data/aboutContent.js';
 
 const STORAGE_KEY = 'thread-theory-cart';
