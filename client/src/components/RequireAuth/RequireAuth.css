@@ -1,0 +1,12 @@
+.require-auth-loading {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  padding: 48px var(--page-gutter);
+  color: var(--color-gray);
+  font-size: 14px;
+}
+
+.require-auth-loading p {
+  margin: 0;
+}

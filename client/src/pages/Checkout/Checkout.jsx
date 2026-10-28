@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth.js';
 import { useCart } from '../../context/useCart.js';
 import { formatPeso } from '../../data/products.js';
 import DeliveryLocationPicker from '../../components/DeliveryLocationPicker/DeliveryLocationPicker.jsx';
@@ -17,6 +18,7 @@ export default function Checkout() {
   const directItem = location.state?.directItem;
 
   const { selectedItems, depositPercent, removeItem } = useCart();
+  const { user } = useAuth();
 
   const items = directItem ? [directItem] : selectedItems;
 
@@ -117,9 +119,12 @@ export default function Checkout() {
   return (
     <main className="checkout-page">
       <header className="checkout-heading">
-        <p className="eyebrow">Guest checkout</p>
+        <p className="eyebrow">Checkout</p>
         <h1>Complete your order</h1>
-        <p>You can check out without creating an account.</p>
+        <p>
+          Signed in as {user?.email ?? 'your account'}. We’ve filled in your
+          contact details; you can change them for this order.
+        </p>
       </header>
 
       <div className="checkout-preview-notice" role="status">
@@ -140,12 +145,24 @@ export default function Checkout() {
             <div className="checkout-field-grid">
               <label className="checkout-field checkout-field-wide">
                 Full name
-                <input name="fullName" type="text" autoComplete="name" required />
+                <input
+                  name="fullName"
+                  type="text"
+                  autoComplete="name"
+                  defaultValue={user?.displayName ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">
                 Email address
-                <input name="email" type="email" autoComplete="email" required />
+                <input
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  defaultValue={user?.email ?? ''}
+                  required
+                />
               </label>
 
               <label className="checkout-field">

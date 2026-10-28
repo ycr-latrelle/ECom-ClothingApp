@@ -1,0 +1,278 @@
+.account-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  align-items: start;
+  gap: clamp(28px, 6vw, 96px);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 80px) var(--page-gutter) clamp(48px, 8vw, 96px);
+}
+
+.account-intro h1 {
+  margin: 10px 0 0;
+  font-family: var(--font-heading);
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.04;
+  letter-spacing: -0.055em;
+}
+
+.account-intro p:not(.eyebrow) {
+  max-width: 42ch;
+  margin: 16px 0 0;
+  line-height: 1.65;
+  color: var(--color-gray);
+}
+
+.account-card {
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--color-line);
+  background: white;
+}
+
+/* ---------- sign in / create account switch ---------- */
+.account-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-line);
+}
+
+.account-switch button {
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.account-switch button.is-active {
+  color: white;
+  background: var(--color-navy);
+}
+
+/* ---------- form ---------- */
+.account-form {
+  display: grid;
+  gap: 18px;
+}
+
+.account-field {
+  display: grid;
+  gap: 7px;
+}
+
+.account-field label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.account-field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.account-field input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.account-hint,
+.account-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.account-hint { color: var(--color-gray); }
+.account-error { color: #b42318; }
+
+.account-lede {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-gray);
+}
+
+.account-banner {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.account-banner.is-error {
+  color: #b42318;
+  border: 1px solid rgba(180, 35, 24, 0.35);
+  background: rgba(180, 35, 24, 0.06);
+}
+
+.account-banner.is-success {
+  color: var(--color-navy);
+  border: 1px solid rgba(23, 42, 57, 0.25);
+  background: rgba(23, 42, 57, 0.06);
+}
+
+.account-status {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: 14px;
+}
+
+/* ---------- buttons ---------- */
+.account-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--color-navy);
+  color: white;
+  background: var(--color-navy);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.account-button:hover:not(:disabled) {
+  border-color: var(--color-coral-deep);
+  background: var(--color-coral-deep);
+}
+
+.account-button.is-outline {
+  color: var(--color-navy);
+  background: transparent;
+}
+
+.account-button.is-outline:hover:not(:disabled) {
+  color: white;
+  border-color: var(--color-navy);
+  background: var(--color-navy);
+}
+
+.account-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.account-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.account-link:hover { color: var(--color-coral-deep); }
+
+.account-card button:focus-visible,
+.account-card a:focus-visible,
+.account-field input:focus-visible {
+  outline: 2px solid var(--color-coral);
+  outline-offset: 2px;
+}
+
+/* ---------- signed in ---------- */
+.account-summary {
+  display: grid;
+  gap: 24px;
+}
+
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.account-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  color: white;
+  background: var(--color-navy);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.account-identity h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.account-identity-label,
+.account-identity-email {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-gray);
+  overflow-wrap: anywhere;
+}
+
+.account-actions {
+  display: grid;
+  gap: 10px;
+}
+
+/* ---------- not configured ---------- */
+.account-setup {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.account-setup h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.account-setup p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-gray);
+}
+
+.account-setup code {
+  padding: 1px 5px;
+  background: rgba(23, 42, 57, 0.07);
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .account-page {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .account-card {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-switch button,
+  .account-button { transition: none; }
+}

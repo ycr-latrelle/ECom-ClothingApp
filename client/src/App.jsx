@@ -10,6 +10,8 @@ import About from "./pages/About/About.jsx";
 import Journal from "./pages/Journal/Journal.jsx";
 import JournalArticle from "./pages/JournalArticle/JournalArticle.jsx";
 import Checkout from "./pages/Checkout/Checkout.jsx";
+import Account from "./pages/Account/Account.jsx";
+import RequireAuth from "./components/RequireAuth/RequireAuth.jsx";
 import OrderConfirmation from "./pages/OrderConfirmation/OrderConfirmation.jsx";
 
 import AuthProvider from "./context/AuthProvider.jsx";
@@ -27,7 +29,15 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/journal/:slug" element={<JournalArticle />} />
-            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/account" element={<Account />} />
+            <Route
+              path="/checkout"
+              element={
+                <RequireAuth>
+                  <Checkout />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/order-confirmation/:orderId"
               element={<OrderConfirmation />}

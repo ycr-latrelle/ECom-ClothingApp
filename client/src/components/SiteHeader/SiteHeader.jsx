@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth.js';
 import { useCart } from '../../context/useCart.js';
 import './SiteHeader.css';
 
@@ -13,6 +14,7 @@ const links = [
 
 export default function SiteHeader() {
   const { count, openCart } = useCart();
+  const { user, loading } = useAuth();
   const isHome = useLocation().pathname === '/';
   const [scrolled, setScrolled] = useState(() => window.scrollY > 40);
   const headerRef = useRef(null);
@@ -39,6 +41,12 @@ export default function SiteHeader() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const accountLabel = loading
+    ? 'Your account'
+    : user
+      ? `Your account, signed in as ${user.displayName?.trim() || user.email}`
+      : 'Sign in or create an account';
+
   const className = [
     'site-header',
     isHome && 'is-floating',
@@ -64,7 +72,7 @@ export default function SiteHeader() {
 
       <div className="site-header-actions">
         <Link to="/shop" className="header-icon" aria-label="Search products">⌕</Link>
-        <Link to="/account" className="header-icon" aria-label="Your account">♙</Link>
+        <Link to="/account" className="header-icon" aria-label={accountLabel}>♙</Link>
         <button
           type="button"
           className="header-icon bag-icon"
