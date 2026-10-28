@@ -12,14 +12,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 const string ClientCorsPolicy = "ClientCorsPolicy";
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+if (builder.Environment.IsDevelopment())
+{
+    allowedOrigins = allowedOrigins
+        .Append("http://localhost:5173")
+        .ToArray();
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(ClientCorsPolicy, policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://thread-theory-gray.vercel.app")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
