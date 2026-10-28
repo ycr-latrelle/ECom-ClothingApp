@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,3 +24,7 @@ const firebaseApp = firebaseConfigured
   : null;
 
 export const auth = firebaseApp ? getAuth(firebaseApp) : null;
+
+// Cloud Firestore holds each customer's profile (name, age, gender, address)
+// in a `users/{uid}` document.
+export const db = firebaseApp ? getFirestore(firebaseApp) : null;

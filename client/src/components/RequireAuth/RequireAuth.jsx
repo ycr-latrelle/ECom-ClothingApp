@@ -7,10 +7,10 @@ import './RequireAuth.css';
 // router state such as QuickCheckout's `directItem`) saved in `location.state.from`
 // so the Account screen can send them back after sign-in.
 export default function RequireAuth({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, profile, profileLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <main className="require-auth-loading" role="status" aria-live="polite">
         <p>Checking your account…</p>
@@ -18,7 +18,8 @@ export default function RequireAuth({ children }) {
     );
   }
 
-  if (!user) {
+  // No profile yet means registration step 2 isn't finished; /account shows it.
+  if (!user || !profile) {
     const { pathname, search, hash, state } = location;
     return <Navigate to="/account" replace state={{ from: { pathname, search, hash, state } }} />;
   }

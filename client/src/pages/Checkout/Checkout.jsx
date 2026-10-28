@@ -18,7 +18,11 @@ export default function Checkout() {
   const directItem = location.state?.directItem;
 
   const { selectedItems, depositPercent, removeItem } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const fullName = profile
+    ? `${profile.firstName} ${profile.lastName}`
+    : (user?.displayName ?? '');
+  const address = profile?.address;
 
   const items = directItem ? [directItem] : selectedItems;
 
@@ -149,7 +153,7 @@ export default function Checkout() {
                   name="fullName"
                   type="text"
                   autoComplete="name"
-                  defaultValue={user?.displayName ?? ''}
+                  defaultValue={fullName}
                   required
                 />
               </label>
@@ -179,22 +183,22 @@ export default function Checkout() {
             <div className="checkout-field-grid">
               <label className="checkout-field checkout-field-wide">
                 Street address
-                <input name="street" autoComplete="address-line1" required />
+                <input name="street" autoComplete="address-line1" defaultValue={address?.street ?? ''} required />
               </label>
 
               <label className="checkout-field">
                 Barangay
-                <input name="barangay" autoComplete="address-line2" />
+                <input name="barangay" autoComplete="address-line2" defaultValue={address?.barangay ?? ''} />
               </label>
 
               <label className="checkout-field">
                 City or municipality
-                <input name="city" autoComplete="address-level2" required />
+                <input name="city" autoComplete="address-level2" defaultValue={address?.city ?? ''} required />
               </label>
 
               <label className="checkout-field">
                 Province
-                <input name="province" autoComplete="address-level1" required />
+                <input name="province" autoComplete="address-level1" defaultValue={address?.province ?? ''} required />
               </label>
 
               <label className="checkout-field">
@@ -203,6 +207,7 @@ export default function Checkout() {
                   name="postalCode"
                   inputMode="numeric"
                   autoComplete="postal-code"
+                  defaultValue={address?.postalCode ?? ''}
                   required
                 />
               </label>

@@ -70,7 +70,8 @@
   font-weight: 600;
 }
 
-.account-field input {
+.account-field input,
+.account-field select {
   width: 100%;
   min-height: 46px;
   padding: 10px 12px;
@@ -81,7 +82,8 @@
   font: inherit;
 }
 
-.account-field input[aria-invalid='true'] {
+.account-field input[aria-invalid='true'],
+.account-field select[aria-invalid='true'] {
   border-color: #b42318;
 }
 
@@ -183,7 +185,8 @@
 
 .account-card button:focus-visible,
 .account-card a:focus-visible,
-.account-field input:focus-visible {
+.account-field input:focus-visible,
+.account-field select:focus-visible {
   outline: 2px solid var(--color-coral);
   outline-offset: 2px;
 }
@@ -275,4 +278,135 @@
 @media (prefers-reduced-motion: reduce) {
   .account-switch button,
   .account-button { transition: none; }
+}
+
+/* ---------- show / hide password ---------- */
+.account-password {
+  position: relative;
+}
+
+.account-password input {
+  padding-right: 76px;
+}
+
+.account-password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 14px;
+  border: 0;
+  color: var(--color-navy);
+  background: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.account-password-toggle:hover {
+  color: var(--color-coral-deep);
+}
+
+.account-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- registration steps ---------- */
+.account-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.account-steps li {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 3px solid var(--color-line);
+  color: var(--color-gray);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.account-steps li.is-current,
+.account-steps li.is-done {
+  border-top-color: var(--color-navy);
+  color: var(--color-navy);
+}
+
+.account-step-num {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.account-steps li.is-current .account-step-num {
+  color: white;
+  border-color: var(--color-navy);
+  background: var(--color-navy);
+}
+
+/* ---------- step 2: profile form ---------- */
+.account-page.is-wide {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 640px);
+}
+
+.account-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.account-fieldset legend {
+  margin-bottom: 14px;
+  padding: 0;
+  color: var(--color-gray);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.account-grid .span-2 { grid-column: span 2; }
+.account-grid .span-3 { grid-column: span 3; }
+.account-grid .span-6 { grid-column: span 6; }
+
+@media (max-width: 860px) {
+  .account-page.is-wide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .account-grid .span-2,
+  .account-grid .span-3 {
+    grid-column: 1 / -1;
+  }
 }

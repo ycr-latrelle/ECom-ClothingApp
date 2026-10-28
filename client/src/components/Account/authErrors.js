@@ -12,6 +12,9 @@ const MESSAGES = {
   'auth/user-disabled': 'This account has been disabled. Contact the store for help.',
   'auth/network-request-failed': 'We couldn’t reach the sign-in service. Check your connection and try again.',
   'auth/operation-not-allowed': 'Email sign-in is not turned on for this store yet.',
+  // Cloud Firestore (saving the profile)
+  'permission-denied': 'We couldn’t save your details. Please try again in a moment.',
+  unavailable: 'We couldn’t reach the server. Check your connection and try again.',
 };
 
 export const NOT_CONFIGURED_MESSAGE =

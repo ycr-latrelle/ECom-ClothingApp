@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/useAuth.js';
 import AccountField from './AccountField.jsx';
+import PasswordField from './PasswordField.jsx';
 import { EMAIL_PATTERN, friendlyAuthError } from './authErrors.js';
 
+// Sign in asks for an email and password, nothing else.
 export default function SignInForm({ onForgot, onAuthenticated }) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
@@ -47,17 +49,22 @@ export default function SignInForm({ onForgot, onAuthenticated }) {
         autoComplete="email"
         value={email}
         error={errors.email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          setErrors((current) => ({ ...current, email: undefined }));
+        }}
       />
 
-      <AccountField
+      <PasswordField
         label="Password"
         name="password"
-        type="password"
         autoComplete="current-password"
         value={password}
         error={errors.password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setErrors((current) => ({ ...current, password: undefined }));
+        }}
       />
 
       {formError && <p className="account-banner is-error" role="alert">{formError}</p>}

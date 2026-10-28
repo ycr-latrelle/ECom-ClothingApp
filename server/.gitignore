@@ -1,0 +1,7 @@
+/secrets/
+appsettings.Development.json
+appsettings.json
+.env
+
+/bin/
+/obj/
