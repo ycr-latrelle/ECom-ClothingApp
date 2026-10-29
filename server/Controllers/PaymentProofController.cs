@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Api.Data;
@@ -24,15 +26,18 @@ public sealed class PaymentProofController : ControllerBase
 
     private readonly PaymentSubmissionRepository _repository;
     private readonly TelegramReceiptService _telegram;
+    private readonly ReceiptAnalysisService _receiptAnalysis;
     private readonly ILogger<PaymentProofController> _logger;
 
     public PaymentProofController(
         PaymentSubmissionRepository repository,
         TelegramReceiptService telegram,
+        ReceiptAnalysisService receiptAnalysis,
         ILogger<PaymentProofController> logger)
     {
         _repository = repository;
         _telegram = telegram;
+        _receiptAnalysis = receiptAnalysis;
         _logger = logger;
     }
 
@@ -58,12 +63,18 @@ public sealed class PaymentProofController : ControllerBase
 
         if (image.Length > MaxImageBytes)
         {
-            return BadRequest(new { error = "The receipt image must be 5 MB or smaller." });
+            return BadRequest(new
+            {
+                error = "The receipt image must be 5 MB or smaller.",
+            });
         }
 
         if (!AllowedImageTypes.Contains(image.ContentType))
         {
-            return BadRequest(new { error = "Upload a JPEG or PNG receipt image." });
+            return BadRequest(new
+            {
+                error = "Upload a JPEG or PNG receipt image.",
+            });
         }
 
         var order = await _repository.GetOrderForPaymentAsync(
@@ -87,9 +98,53 @@ public sealed class PaymentProofController : ControllerBase
             });
         }
 
-        var method = request.PaymentMethod.Trim();
+        var destination = request.PaymentMethod.Trim();
+        var sourceProvider = string.IsNullOrWhiteSpace(
+            request.PaymentSourceProvider)
+                ? destination
+                : request.PaymentSourceProvider.Trim();
+
         var senderName = request.SenderName.Trim();
         var paymentReference = request.PaymentReferenceNumber.Trim();
+
+        ReceiptAnalysisResult receiptAnalysis;
+
+        try
+        {
+            await using var receiptStream = image.OpenReadStream();
+
+            receiptAnalysis = await _receiptAnalysis.AnalyzeAsync(
+                receiptStream,
+                sourceProvider,
+                paymentReference,
+                order.DueToday,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Receipt screening was unavailable for order {OrderId}.",
+                orderId);
+
+            var imageHash = await ComputeSha256Async(
+                image,
+                cancellationToken);
+
+            receiptAnalysis = new ReceiptAnalysisResult(
+                "analysis_unavailable",
+                false,
+                false,
+                false,
+                false,
+                false,
+                imageHash,
+                ["ocr_unavailable"]);
+        }
 
         var address = string.Join(
             ", ",
@@ -135,7 +190,8 @@ public sealed class PaymentProofController : ControllerBase
             {productDetails}
 
             PAYMENT DETAILS
-            [-----{method.ToUpperInvariant()}-----]
+            SOURCE PROVIDER: {sourceProvider}
+            STORE DESTINATION: {destination}
             SENDER NAME: {senderName}
             PAYMENT REFERENCE NUMBER: {paymentReference}
             AMOUNT DUE: PHP {order.DueToday.ToString("N2", CultureInfo.InvariantCulture)}
@@ -168,10 +224,13 @@ public sealed class PaymentProofController : ControllerBase
         var saved = await _repository.SavePendingVerificationAsync(
             order.Id,
             firebaseUid,
-            method,
+            destination,
+            sourceProvider,
+            destination,
             senderName,
             paymentReference,
             order.DueToday,
+            receiptAnalysis,
             telegramReceipt,
             cancellationToken);
 
@@ -188,6 +247,21 @@ public sealed class PaymentProofController : ControllerBase
             orderId = order.Id,
             orderCode = order.OrderCode,
             paymentStatus = "pending_verification",
+            receiptScreeningStatus = receiptAnalysis.Status,
+            receiptScreeningFlags = receiptAnalysis.Flags,
         });
+    }
+
+    private static async Task<string> ComputeSha256Async(
+        IFormFile image,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = image.OpenReadStream();
+
+        var hash = await SHA256.HashDataAsync(
+            stream,
+            cancellationToken);
+
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

@@ -8,8 +8,13 @@ using server.Api.Data;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using server.Api.Health;
 using server.Api.Services;
+using Google.Cloud.Vision.V1;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddFilter(
+    "System.Net.Http.HttpClient.TelegramReceiptService",
+    LogLevel.Warning);
 
 builder.Services.AddHttpClient<TelegramReceiptService>(client =>
 {
@@ -57,6 +62,14 @@ var fullServiceAccountPath = Path.IsPathRooted(serviceAccountPath)
     ? serviceAccountPath
     : Path.Combine(builder.Environment.ContentRootPath, serviceAccountPath);
 
+builder.Services.AddSingleton<ImageAnnotatorClient>(_ =>
+    new ImageAnnotatorClientBuilder
+    {
+        CredentialsPath = fullServiceAccountPath,
+    }.Build());
+
+builder.Services.AddScoped<ReceiptOcrService>();
+
 FirebaseApp.Create(new AppOptions
 {
     Credential = CredentialFactory
@@ -92,6 +105,8 @@ builder.Services.AddScoped<CustomerProfileRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<PaymentSubmissionRepository>();
+builder.Services.AddScoped<ReceiptAnalysisService>();
+builder.Services.AddScoped<ReceiptAnalysisService>();
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 builder.Services

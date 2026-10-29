@@ -1,6 +1,7 @@
 using Npgsql;
 using NpgsqlTypes;
 using server.Api.Services;
+using System.Text.Json;
 
 namespace server.Api.Data;
 
@@ -90,14 +91,17 @@ public sealed class PaymentSubmissionRepository
     }
 
     public async Task<bool> SavePendingVerificationAsync(
-        Guid orderId,
-        string firebaseUid,
-        string paymentMethod,
-        string senderName,
-        string paymentReferenceNumber,
-        decimal amount,
-        TelegramReceiptReference telegramReceipt,
-        CancellationToken cancellationToken = default)
+    Guid orderId,
+    string firebaseUid,
+    string paymentMethod,
+    string paymentSourceProvider,
+    string paymentDestinationId,
+    string senderName,
+    string paymentReferenceNumber,
+    decimal amount,
+    ReceiptAnalysisResult receiptAnalysis,
+    TelegramReceiptReference telegramReceipt,
+    CancellationToken cancellationToken = default)
     {
         await using var connection =
             await _dataSource.OpenConnectionAsync(cancellationToken);
@@ -105,13 +109,13 @@ public sealed class PaymentSubmissionRepository
             await connection.BeginTransactionAsync(cancellationToken);
 
         const string updateOrderSql = """
-            UPDATE app_private.orders
-            SET payment_status = 'pending_verification',
-                updated_at = NOW()
-            WHERE id = @order_id
-              AND firebase_uid = @firebase_uid
-              AND payment_status = 'awaiting_submission';
-            """;
+        UPDATE app_private.orders
+        SET payment_status = 'pending_verification',
+            updated_at = NOW()
+        WHERE id = @order_id
+          AND firebase_uid = @firebase_uid
+          AND payment_status = 'awaiting_submission';
+        """;
 
         await using (var updateCommand =
                      new NpgsqlCommand(updateOrderSql, connection, transaction))
@@ -130,33 +134,45 @@ public sealed class PaymentSubmissionRepository
         }
 
         const string insertPaymentSql = """
-            INSERT INTO app_private.payment_submissions (
-                order_id,
-                firebase_uid,
-                payment_purpose,
-                payment_method,
-                sender_name,
-                reference_number,
-                amount,
-                verification_status,
-                telegram_chat_id,
-                telegram_message_id,
-                telegram_file_id
-            )
-            VALUES (
-                @order_id,
-                @firebase_uid,
-                'initial_due',
-                @payment_method,
-                @sender_name,
-                @reference_number,
-                @amount,
-                'pending_verification',
-                @telegram_chat_id,
-                @telegram_message_id,
-                @telegram_file_id
-            );
-            """;
+        INSERT INTO app_private.payment_submissions (
+            order_id,
+            firebase_uid,
+            payment_purpose,
+            payment_method,
+            payment_source_provider,
+            payment_destination_id,
+            sender_name,
+            reference_number,
+            amount,
+            verification_status,
+            receipt_validation_status,
+            receipt_validation_result,
+            receipt_sha256,
+            receipt_validated_at,
+            telegram_chat_id,
+            telegram_message_id,
+            telegram_file_id
+        )
+        VALUES (
+            @order_id,
+            @firebase_uid,
+            'initial_due',
+            @payment_method,
+            @payment_source_provider,
+            @payment_destination_id,
+            @sender_name,
+            @reference_number,
+            @amount,
+            'pending_verification',
+            @receipt_validation_status,
+            @receipt_validation_result,
+            @receipt_sha256,
+            @receipt_validated_at,
+            @telegram_chat_id,
+            @telegram_message_id,
+            @telegram_file_id
+        );
+        """;
 
         await using (var insertCommand =
                      new NpgsqlCommand(insertPaymentSql, connection, transaction))
@@ -164,6 +180,12 @@ public sealed class PaymentSubmissionRepository
             insertCommand.Parameters.AddWithValue("order_id", orderId);
             insertCommand.Parameters.AddWithValue("firebase_uid", firebaseUid);
             insertCommand.Parameters.AddWithValue("payment_method", paymentMethod);
+            insertCommand.Parameters.AddWithValue(
+                "payment_source_provider",
+                paymentSourceProvider);
+            insertCommand.Parameters.AddWithValue(
+                "payment_destination_id",
+                paymentDestinationId);
             insertCommand.Parameters.AddWithValue("sender_name", senderName);
             insertCommand.Parameters.AddWithValue(
                 "reference_number",
@@ -171,6 +193,19 @@ public sealed class PaymentSubmissionRepository
             insertCommand.Parameters.Add(
                 "amount",
                 NpgsqlDbType.Numeric).Value = amount;
+            insertCommand.Parameters.AddWithValue(
+                "receipt_validation_status",
+                receiptAnalysis.Status);
+            insertCommand.Parameters.Add(
+                "receipt_validation_result",
+                NpgsqlDbType.Jsonb).Value =
+                JsonSerializer.Serialize(receiptAnalysis);
+            insertCommand.Parameters.AddWithValue(
+                "receipt_sha256",
+                receiptAnalysis.ReceiptSha256);
+            insertCommand.Parameters.Add(
+                "receipt_validated_at",
+                NpgsqlDbType.TimestampTz).Value = DateTime.UtcNow;
             insertCommand.Parameters.AddWithValue(
                 "telegram_chat_id",
                 telegramReceipt.ChatId);

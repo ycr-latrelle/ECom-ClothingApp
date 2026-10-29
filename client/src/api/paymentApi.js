@@ -3,7 +3,13 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '
 export async function submitPaymentProof(
   user,
   orderId,
-  { paymentMethod, senderName, paymentReferenceNumber, proofImage },
+  {
+    paymentMethod,
+    paymentSourceProvider,
+    senderName,
+    paymentReferenceNumber,
+    proofImage,
+  },
 ) {
   if (!API_BASE_URL) {
     throw new Error('VITE_API_BASE_URL is missing from the client environment.');
@@ -17,6 +23,7 @@ export async function submitPaymentProof(
   const formData = new FormData();
 
   formData.append('PaymentMethod', paymentMethod);
+  formData.append('PaymentSourceProvider', paymentSourceProvider);
   formData.append('SenderName', senderName);
   formData.append('PaymentReferenceNumber', paymentReferenceNumber);
   formData.append('ProofImage', proofImage);

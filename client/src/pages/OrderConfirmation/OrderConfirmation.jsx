@@ -33,7 +33,10 @@ export default function OrderConfirmation() {
     location.state?.order?.id === orderId ? location.state.order : null;
   const order = readSavedOrder(orderId) ?? routeOrder;
 
+  // paymentMethod is the store's receiving destination.
   const [paymentMethod, setPaymentMethod] = useState('GCash');
+  const [paymentSourceProvider, setPaymentSourceProvider] = useState('BPI');
+  const [otherPaymentSource, setOtherPaymentSource] = useState('');
   const [senderName, setSenderName] = useState('');
   const [paymentReferenceNumber, setPaymentReferenceNumber] = useState('');
   const [proofImage, setProofImage] = useState(null);
@@ -95,12 +98,23 @@ export default function OrderConfirmation() {
       return;
     }
 
+    const sourceProvider =
+      paymentSourceProvider === 'Other'
+        ? otherPaymentSource.trim()
+        : paymentSourceProvider;
+
+    if (!sourceProvider) {
+      setSubmitError('Enter the bank or wallet you sent the payment from.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError('');
 
     try {
       const result = await submitPaymentProof(user, order.id, {
         paymentMethod,
+        paymentSourceProvider: sourceProvider,
         senderName: senderName.trim(),
         paymentReferenceNumber: paymentReferenceNumber.trim(),
         proofImage,
@@ -132,7 +146,9 @@ export default function OrderConfirmation() {
 
   return (
     <main className="confirmation-page">
-      <div className="confirmation-mark" aria-hidden="true">✓</div>
+      <div className="confirmation-mark" aria-hidden="true">
+        ✓
+      </div>
       <p className="eyebrow">Order saved</p>
       <h1>Your test order is saved</h1>
 
@@ -193,7 +209,7 @@ export default function OrderConfirmation() {
           </p>
 
           <div className="confirmation-qr-placeholder">
-            <strong>{paymentMethod} QR payment</strong>
+            <strong>{paymentMethod} store payment destination</strong>
             <span>
               Add the official store QR image before accepting live payments.
               For this test order, use a test receipt and do not send money.
@@ -215,7 +231,37 @@ export default function OrderConfirmation() {
               onSubmit={handlePaymentSubmit}
             >
               <label>
-                Payment method
+                Where did you send the payment from?
+                <select
+                  value={paymentSourceProvider}
+                  onChange={(event) =>
+                    setPaymentSourceProvider(event.target.value)
+                  }
+                >
+                  <option value="BPI">BPI</option>
+                  <option value="GCash">GCash</option>
+                  <option value="Maya">Maya</option>
+                  <option value="Other">Other bank or e-wallet</option>
+                </select>
+              </label>
+
+              {paymentSourceProvider === 'Other' && (
+                <label>
+                  Bank or e-wallet name
+                  <input
+                    type="text"
+                    value={otherPaymentSource}
+                    onChange={(event) =>
+                      setOtherPaymentSource(event.target.value)
+                    }
+                    maxLength={50}
+                    required
+                  />
+                </label>
+              )}
+
+              <label>
+                Store receiving account
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
@@ -285,9 +331,7 @@ export default function OrderConfirmation() {
                 type="submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting
-                  ? 'Sending receipt…'
-                  : 'Submit payment proof'}
+                {isSubmitting ? 'Sending receipt…' : 'Submit payment proof'}
               </button>
             </form>
           )}
