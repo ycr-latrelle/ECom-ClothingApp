@@ -14,6 +14,10 @@ RUN dotnet publish "server.Api.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production

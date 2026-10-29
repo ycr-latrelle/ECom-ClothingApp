@@ -8,7 +8,6 @@ using server.Api.Data;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using server.Api.Health;
 using server.Api.Services;
-using Google.Cloud.Vision.V1;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,12 +60,6 @@ if (string.IsNullOrWhiteSpace(serviceAccountPath))
 var fullServiceAccountPath = Path.IsPathRooted(serviceAccountPath)
     ? serviceAccountPath
     : Path.Combine(builder.Environment.ContentRootPath, serviceAccountPath);
-
-builder.Services.AddSingleton<ImageAnnotatorClient>(_ =>
-    new ImageAnnotatorClientBuilder
-    {
-        CredentialsPath = fullServiceAccountPath,
-    }.Build());
 
 builder.Services.AddScoped<ReceiptOcrService>();
 
