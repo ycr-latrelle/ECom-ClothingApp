@@ -146,6 +146,27 @@ public sealed class PaymentProofController : ControllerBase
                 ["ocr_unavailable"]);
         }
 
+        var hasAnyReceiptSignal =
+            receiptAnalysis.PaymentTermsFound ||
+            receiptAnalysis.SelectedProviderMentionFound ||
+            receiptAnalysis.SuccessStatusFound ||
+            receiptAnalysis.AmountMatches ||
+            receiptAnalysis.ReferenceMatches;
+
+        if (!string.Equals(
+                receiptAnalysis.Status,
+                "analysis_unavailable",
+                StringComparison.Ordinal) &&
+            !hasAnyReceiptSignal)
+        {
+            return UnprocessableEntity(new
+            {
+                error = "We couldn't read payment receipt details from this image. Upload a clearer receipt screenshot.",
+                receiptScreeningStatus = "not_receipt",
+                receiptScreeningFlags = receiptAnalysis.Flags,
+            });
+        }
+
         var address = string.Join(
             ", ",
             new[]
