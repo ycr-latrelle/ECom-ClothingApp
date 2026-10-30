@@ -1,6 +1,7 @@
 using Npgsql;
 using NpgsqlTypes;
 using server.Api.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace server.Api.Data;
 
@@ -10,9 +11,14 @@ public sealed class OrderRepository
 
     private readonly NpgsqlDataSource _dataSource;
 
-    public OrderRepository(NpgsqlDataSource dataSource)
+    private readonly bool _isTest;
+
+    public OrderRepository(
+            NpgsqlDataSource dataSource,
+            IConfiguration configuration)
     {
         _dataSource = dataSource;
+        _isTest = configuration.GetValue<bool?>("Orders:IsTest") ?? true;
     }
 
     public async Task<CreateOrderResponse> CreateAsync(
@@ -191,7 +197,7 @@ public sealed class OrderRepository
                 @delivery_accuracy_meters,
                 @ready_subtotal, @preorder_subtotal, @deposit_percent,
                 @deposit_amount, @due_today, @balance_later,
-                'awaiting_payment', 'awaiting_submission', TRUE, @created_at, @created_at
+                'awaiting_payment', 'awaiting_submission', @is_test, @created_at, @created_at
             );
             """;
 
@@ -243,6 +249,8 @@ public sealed class OrderRepository
             orderCommand.Parameters.AddWithValue("due_today", dueToday);
             orderCommand.Parameters.AddWithValue("balance_later", balanceLater);
             orderCommand.Parameters.AddWithValue("created_at", createdAt);
+
+            orderCommand.Parameters.AddWithValue("is_test", _isTest);
 
             await orderCommand.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -299,6 +307,7 @@ public sealed class OrderRepository
             depositAmount,
             dueToday,
             balanceLater,
+            _isTest,
             createdAt);
     }
 

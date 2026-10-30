@@ -11,4 +11,5 @@ public sealed record CreateOrderResponse(
     decimal DepositAmount,
     decimal DueToday,
     decimal BalanceLater,
+    bool isTest,
     DateTimeOffset CreatedAt);

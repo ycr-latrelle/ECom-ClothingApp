@@ -24,6 +24,7 @@ export default function Checkout() {
   const fullName = profile
     ? `${profile.firstName} ${profile.lastName}`
     : (user?.displayName ?? '');
+
   const address = profile?.address;
   const items = directItem ? [directItem] : selectedItems;
 
@@ -86,6 +87,7 @@ export default function Checkout() {
         orderCode: result.orderCode,
         orderStatus: result.orderStatus,
         paymentStatus: result.paymentStatus,
+        isTest: result.isTest !== false,
         createdAt: result.createdAt,
         items: items.map(({ id, name, price, image, size, qty }) => ({
           id,
@@ -102,7 +104,10 @@ export default function Checkout() {
       };
 
       try {
-        sessionStorage.setItem(ORDER_SUMMARY_KEY, JSON.stringify(orderSummary));
+        sessionStorage.setItem(
+          ORDER_SUMMARY_KEY,
+          JSON.stringify(orderSummary),
+        );
       } catch {
         // The confirmation screen can still use router state.
       }
@@ -148,11 +153,11 @@ export default function Checkout() {
       </header>
 
       <div className="checkout-preview-notice" role="status">
-        <strong>Test order</strong>
+        <strong>Payment verification</strong>
         <span>
-          This saves an order record. The backend currently marks orders as test
-          data. Payment method, transaction reference, and receipt upload are not
-          submitted yet.
+          After placing the order, you can submit the payment details and
+          receipt. Payment stays pending until the store verifies the
+          transaction.
         </span>
       </div>
 
@@ -249,7 +254,8 @@ export default function Checkout() {
               </label>
 
               <label className="checkout-field checkout-field-wide">
-                Delivery notes <span className="checkout-optional">(optional)</span>
+                Delivery notes{' '}
+                <span className="checkout-optional">(optional)</span>
                 <textarea name="deliveryNotes" rows="3" />
               </label>
             </div>
@@ -268,9 +274,8 @@ export default function Checkout() {
             <p className="checkout-step">03</p>
             <h2>Payment submission</h2>
             <p className="checkout-help">
-              Payment method, transaction reference, and receipt upload will be
-              connected after order creation. This step saves the order record
-              only.
+              You’ll submit your payment details and receipt on the next screen.
+              Payment remains pending until the store verifies the transaction.
             </p>
           </section>
 
@@ -286,8 +291,8 @@ export default function Checkout() {
             disabled={isSubmitting}
           >
             {isSubmitting
-              ? 'Saving test order…'
-              : `Create test order · ${formatPeso(dueToday)} due today`}
+              ? 'Saving order…'
+              : `Create order · ${formatPeso(dueToday)} due today`}
           </button>
         </form>
 

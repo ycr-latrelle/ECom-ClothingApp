@@ -33,7 +33,6 @@ export default function OrderConfirmation() {
     location.state?.order?.id === orderId ? location.state.order : null;
   const order = readSavedOrder(orderId) ?? routeOrder;
 
-  // paymentMethod is the store's receiving destination.
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [paymentSourceProvider, setPaymentSourceProvider] = useState('BPI');
   const [otherPaymentSource, setOtherPaymentSource] = useState('');
@@ -61,6 +60,8 @@ export default function OrderConfirmation() {
     );
   }
 
+  // Treat older saved summaries without this field as test orders.
+  const isTestOrder = order.isTest !== false;
   const paymentStatus = submittedPaymentStatus ?? order.paymentStatus;
 
   function handleImageChange(event) {
@@ -149,13 +150,16 @@ export default function OrderConfirmation() {
       <div className="confirmation-mark" aria-hidden="true">
         ✓
       </div>
-      <p className="eyebrow">Order saved</p>
-      <h1>Your test order is saved</h1>
 
-      <div className="confirmation-notice" role="status">
-        This order is marked as test data. Use a test receipt while checking
-        the Telegram upload flow.
-      </div>
+      <p className="eyebrow">Order saved</p>
+      <h1>{isTestOrder ? 'Your test order is saved' : 'Your order is saved'}</h1>
+
+      {isTestOrder && (
+        <div className="confirmation-notice" role="status">
+          This order is marked as test data. Use a test receipt while checking
+          the Telegram upload flow.
+        </div>
+      )}
 
       <section className="confirmation-card">
         <p className="confirmation-reference">Order code</p>
@@ -211,8 +215,9 @@ export default function OrderConfirmation() {
           <div className="confirmation-qr-placeholder">
             <strong>{paymentMethod} store payment destination</strong>
             <span>
-              Add the official store QR image before accepting live payments.
-              For this test order, use a test receipt and do not send money.
+              {isTestOrder
+                ? 'This flow is in test mode. Use a test receipt only; do not send money.'
+                : 'Official store payment details must be configured before live payments are enabled.'}
             </span>
           </div>
 

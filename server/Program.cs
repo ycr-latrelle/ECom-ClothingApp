@@ -99,7 +99,6 @@ builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<PaymentSubmissionRepository>();
 builder.Services.AddScoped<ReceiptAnalysisService>();
-builder.Services.AddScoped<ReceiptAnalysisService>();
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 builder.Services
