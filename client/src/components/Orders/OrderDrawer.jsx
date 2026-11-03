@@ -10,6 +10,7 @@ import {
   planReorder,
 } from "../../utils/orders.js";
 import OrderStatusBadge from "./OrderStatusBadge.jsx";
+import ProductImage from "../ProductImage/ProductImage.jsx";
 import OrderTimeline from "./OrderTimeline.jsx";
 import PaymentInfo from "./PaymentInfo.jsx";
 import ShipmentInfo from "./ShipmentInfo.jsx";
@@ -264,7 +265,7 @@ export default function OrderDrawer({
                     >
                       <div className="orders-item-media">
                         {image ? (
-                          <img src={image} alt="" loading="lazy" />
+                          <ProductImage src={image} alt="" loading="lazy" />
                         ) : (
                           <span aria-hidden="true">◻</span>
                         )}

@@ -1,6 +1,7 @@
 import { formatPeso } from '../../data/products.js';
 import { formatDateTime } from '../../utils/orders.js';
 import OrderStatusBadge from './OrderStatusBadge.jsx';
+import ProductImage from '../ProductImage/ProductImage.jsx';
 
 export default function OrderCard({ order, productsById, onOpen }) {
   const first = order.items[0];
@@ -22,7 +23,7 @@ export default function OrderCard({ order, productsById, onOpen }) {
   return (
     <article className="orders-card">
       <div className="orders-card-media">
-        {image ? <img src={image} alt="" loading="lazy" /> : <span aria-hidden="true">◻</span>}
+        {image ? <ProductImage src={image} alt="" loading="lazy" /> : <span aria-hidden="true">◻</span>}
       </div>
 
       <div className="orders-card-body">

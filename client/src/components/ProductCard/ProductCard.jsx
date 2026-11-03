@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../../context/useCart.js';
+import ProductImage from '../ProductImage/ProductImage.jsx';
 import { formatPeso } from '../../data/products.js';
 import './ProductCard.css';
 
@@ -40,7 +41,7 @@ export default function ProductCard({
   return (
     <article className="product-card">
       <div className="product-card-media">
-        <img src={image} alt={name} loading="lazy" />
+        <ProductImage src={image} alt={name} loading="lazy" />
         <button
           type="button"
           className="product-card-save"

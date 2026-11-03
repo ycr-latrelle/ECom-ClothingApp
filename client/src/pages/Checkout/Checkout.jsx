@@ -4,6 +4,7 @@ import { createOrder } from '../../api/orderApi.js';
 import DeliveryLocationPicker from '../../components/DeliveryLocationPicker/DeliveryLocationPicker.jsx';
 import { useAuth } from '../../context/useAuth.js';
 import { useCart } from '../../context/useCart.js';
+import ProductImage from '../../components/ProductImage/ProductImage.jsx';
 import { formatPeso } from '../../data/products.js';
 import './Checkout.css';
 
@@ -302,7 +303,7 @@ export default function Checkout() {
           <ul className="checkout-items">
             {items.map((item) => (
               <li key={item.key ?? `${item.id}-${item.size ?? 'one-size'}`}>
-                <img src={item.image} alt="" />
+                <ProductImage src={item.image} alt="" />
 
                 <div>
                   <strong>{item.name}</strong>

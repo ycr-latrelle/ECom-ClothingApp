@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthPanel } from '../../context/useAuthPanel.js';
 import { useCart } from '../../context/useCart.js';
+import ProductImage from '../ProductImage/ProductImage.jsx';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso } from '../../data/products.js';
 import './CartDrawer.css';
@@ -22,7 +23,7 @@ function CartLine({ item }) {
         aria-label={`Include ${item.name}${item.size ? `, size ${item.size}` : ''} in checkout`}
       />
 
-      <img src={item.image} alt="" />
+      <ProductImage src={item.image} alt="" />
 
       <div className="cart-item-info">
         <h4>{item.name}</h4>

@@ -9,11 +9,8 @@ import {
   setAdminProductStatus,
   uploadAdminProductImage,
 } from "../../api/adminProductApi.js";
+import { resolveImageUrl } from "../../utils/imageUrl.js";
 import "./AdminProducts.css";
-
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? ""
-).replace(/\/+$/, "");
 
 const PAGE_SIZE = 8;
 const MAX_IMAGE_COUNT = 10;
@@ -49,16 +46,6 @@ const getActive = (product) =>
   product?.isActive ?? product?.is_active ?? true;
 const getMock = (product) =>
   product?.isMock ?? product?.is_mock ?? false;
-
-const resolveImageUrl = (path) => {
-  if (!path) return "";
-
-  if (/^https?:\/\//i.test(path) || path.startsWith("data:")) {
-    return path;
-  }
-
-  return `${API_BASE_URL}/${path.replace(/^\/+/, "")}`;
-};
 
 const emptyForm = {
   name: "",
@@ -1046,11 +1033,8 @@ function ProductForm({
   slugEdited,
 }) {
   const [dragging, setDragging] = useState(false);
-  const [urlFailed, setUrlFailed] = useState(false);
-
-  useEffect(() => {
-    setUrlFailed(false);
-  }, [form.image]);
+  const [failedImage, setFailedImage] = useState("");
+  const urlFailed = failedImage !== "" && failedImage === form.image;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -1164,7 +1148,7 @@ function ProductForm({
                 <img
                   src={resolveImageUrl(form.image)}
                   alt="Current product"
-                  onError={() => setUrlFailed(true)}
+                  onError={() => setFailedImage(form.image)}
                 />
               )}
             </div>

@@ -17,12 +17,17 @@ using server.Api.Authorization;
 var builder = WebApplication.CreateBuilder(args);
 
 // --------------------------------------------------
-// TELEGRAM HTTP CLIENT
+// TELEGRAM HTTP CLIENTS
 // --------------------------------------------------
 
 builder.Logging.AddFilter(
     "System.Net.Http.HttpClient.TelegramReceiptService",
     LogLevel.Warning);
+
+builder.Services.AddHttpClient<TelegramReceiptService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 builder.Services.AddHttpClient<TelegramProductImageService>(client =>
 {

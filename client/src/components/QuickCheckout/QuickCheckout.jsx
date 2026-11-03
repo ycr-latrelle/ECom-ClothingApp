@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthPanel } from '../../context/useAuthPanel.js';
 import { useCart } from '../../context/useCart.js';
+import ProductImage from '../ProductImage/ProductImage.jsx';
 import { MAX_QTY } from '../../context/cart-context.js';
 import { formatPeso } from '../../data/products.js';
 import './QuickCheckout.css';
@@ -136,7 +137,7 @@ function Panel({ item, mode }) {
         </header>
 
         <div className="quick-item">
-          <img src={item.image} alt="" />
+          <ProductImage src={item.image} alt="" />
 
           <div>
             <h3>{item.name}</h3>
