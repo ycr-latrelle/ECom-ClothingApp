@@ -4,7 +4,7 @@
 // Article fields:
 //   slug, title, category (a key of `categories`), excerpt, author,
 //   publishedAt (YYYY-MM-DD), status ('published' | 'draft'), featured (optional),
-//   cover { src, alt }, productIds (ids from the products API),
+//   cover { src, alt }, productIds (ids from the products API; leave [] if none),
 //   content: array of blocks:
 //     { type: 'h2', text }  { type: 'p', text }  { type: 'list', items: [] }
 //     { type: 'image', src, alt, caption? }
@@ -38,7 +38,7 @@ export const articles = [
     status: 'published',
     featured: true,
     cover: { src: '/images/wide-cargo-pants-image.png', alt: 'Wide cargo pants laid flat' },
-    productIds: ['wide-cargo-pants', 'minimal-logo-tee', 'nb-550-grey'],
+    productIds: [],
     content: [
       { type: 'p', text: 'Wide cargo pants carry a lot of volume, so the rest of the outfit does the balancing. Keep that one idea in mind and the styling gets easier.' },
       { type: 'h2', text: 'Start with a fitted top' },
@@ -58,7 +58,7 @@ export const articles = [
     publishedAt: '2026-10-12',
     status: 'published',
     cover: { src: '/images/tops-image.png', alt: 'Black oversized hoodie' },
-    productIds: ['essential-oversized-hoodie', 'everyday-crew-hoodie'],
+    productIds: [],
     content: [
       { type: 'p', text: 'Always follow the care label on your own piece. These are general habits that suit most cotton fleece.' },
       { type: 'h2', text: 'Turn it inside out' },
@@ -76,7 +76,7 @@ export const articles = [
     publishedAt: '2026-10-05',
     status: 'published',
     cover: { src: '/images/bottoms-image.png', alt: 'Relaxed wide pants' },
-    productIds: ['minimal-logo-tee', 'relaxed-wide-pants', 'court-runner'],
+    productIds: [],
     content: [
       { type: 'p', text: 'Our essentials are the pieces we reach for on repeat. This story explains how we choose them.' },
       { type: 'h2', text: 'Easy to mix' },
@@ -94,7 +94,7 @@ export const articles = [
     publishedAt: '2026-09-28',
     status: 'published',
     cover: { src: '/images/pre-order-image.png', alt: 'Pre-order pieces' },
-    productIds: ['graphic-back-tee', 'wide-cargo-pants'],
+    productIds: [],
     content: [
       { type: 'p', text: 'Ready stock items are on hand and available to buy now. Pre-order items are sourced for you after you order.' },
       { type: 'p', text: 'The About page explains the pre-order steps in full, including the deposit.' },
@@ -109,7 +109,7 @@ export const articles = [
     publishedAt: '2026-09-18',
     status: 'published',
     cover: { src: '/images/footwear-image.png', alt: 'Pair of sneakers' },
-    productIds: ['nb-550-grey', 'court-runner'],
+    productIds: [],
     content: [
       { type: 'list', items: ['Rotate pairs so each one can dry out fully.', 'Wipe dirt off after wearing, before it sets.', 'Store them away from direct sunlight.'] },
     ],
@@ -123,7 +123,7 @@ export const articles = [
     publishedAt: '2026-09-08',
     status: 'draft',
     cover: { src: '/images/accessories-image.png', alt: 'Cap and crossbody bag' },
-    productIds: ['ny-dad-cap', 'cap-and-crossbody'],
+    productIds: [],
     content: [{ type: 'p', text: 'Draft - not visible on the site yet.' }],
   },
 ];

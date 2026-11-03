@@ -99,3 +99,23 @@
 @media (max-width: 560px) {
   .picks-track { grid-auto-columns: 62%; }
 }
+
+.picks-empty {
+  grid-column: 1 / -1;
+  padding: 48px 0;
+  text-align: center;
+  color: var(--color-gray);
+}
+
+.picks-empty strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-ink);
+  font-family: var(--font-heading);
+  font-size: 16px;
+}
+
+.picks-empty p {
+  margin: 0;
+  line-height: 1.6;
+}

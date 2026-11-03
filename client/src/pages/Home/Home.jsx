@@ -84,6 +84,11 @@ export default function Home() {
             <p>Loading products…</p>
           ) : error ? (
             <p role="alert">Products could not be loaded right now.</p>
+          ) : products.length === 0 ? (
+            <div className="picks-empty" role="status">
+              <strong>No products available yet</strong>
+              <p>New pieces will show up here as soon as they are added.</p>
+            </div>
           ) : (
             products.map((product) => (
               <ProductCard key={product.id} {...product} />

@@ -129,8 +129,33 @@ export default function Shop({ preorderOnly = false }) {
           <p className="shop-empty" role="alert">
             Products could not be loaded right now. Please try again later.
           </p>
+        ) : products.length === 0 ? (
+          <div className="shop-empty" role="status">
+            <strong>No products available yet</strong>
+            <p>New pieces will appear here as soon as they are added to the shop.</p>
+          </div>
         ) : visible.length === 0 ? (
-          <p className="shop-empty">No products here yet. Check back after the next drop.</p>
+          <div className="shop-empty" role="status">
+            <strong>
+              {preorderOnly ? 'No pre-order pieces right now' : 'No products match this filter'}
+            </strong>
+            <p>
+              {preorderOnly
+                ? 'Check back after the next drop, or browse what is in stock.'
+                : 'Try another category, or view everything in the shop.'}
+            </p>
+            {preorderOnly ? (
+              <Link className="shop-empty-action" to="/shop">Browse the shop</Link>
+            ) : (
+              <button
+                type="button"
+                className="shop-empty-action"
+                onClick={() => update('category', 'all', 'all')}
+              >
+                View all products
+              </button>
+            )}
+          </div>
         ) : (
           <div className="shop-grid">
             {visible.map((product) => (
