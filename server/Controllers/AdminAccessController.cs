@@ -1,5 +1,4 @@
 
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Api.Services;
@@ -7,7 +6,7 @@ using server.Api.Services;
 namespace server.Api.Controllers;
 
 [ApiController]
-[Route("api/admin")]
+[Route("api/admin/access")]
 [Authorize]
 public sealed class AdminAccessController : ControllerBase
 {
@@ -18,38 +17,40 @@ public sealed class AdminAccessController : ControllerBase
         _roleService = roleService;
     }
 
-    [HttpGet("access")]
-    [ResponseCache(
-        NoStore = true,
-        Location = ResponseCacheLocation.None)]
+    [HttpGet]
     public async Task<IActionResult> GetAccess(
         CancellationToken cancellationToken)
     {
-        var firebaseUid = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
+        var firebaseUid = User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrWhiteSpace(firebaseUid))
         {
-            return Unauthorized();
+            return Unauthorized(new
+            {
+                error = "Unable to identify the authenticated user."
+            });
         }
 
         var role = await _roleService.GetRoleAsync(
             firebaseUid,
             cancellationToken);
 
-        Response.Headers["Cache-Control"] =
-            "no-store, no-cache, must-revalidate";
+        var isOwner = string.Equals(
+            role,
+            "owner",
+            StringComparison.OrdinalIgnoreCase);
 
-        var isOwner = role == "owner";
-        var isAdmin = isOwner || role == "admin";
+        var isAdmin = isOwner || string.Equals(
+            role,
+            "admin",
+            StringComparison.OrdinalIgnoreCase);
 
         return Ok(new
         {
-            role = role ?? "customer",
+            role,
             isAdmin,
-            isOwner,
-            isSeller = role == "seller",
-            canManageRoles = isOwner
+            isOwner
         });
     }
 }

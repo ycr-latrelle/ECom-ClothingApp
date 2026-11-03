@@ -1,4 +1,3 @@
-
 import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
@@ -30,13 +29,14 @@ import RequireAdmin from "./components/RequireAdmin/RequireAdmin.jsx";
 import AdminLayout from "./pages/Admin/AdminLayout.jsx";
 import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
 import AdminModule from "./pages/Admin/AdminModule.jsx";
+import AdminProducts from "./pages/Admin/AdminProducts.jsx";
 
 const Checkout = lazy(() => import("./pages/Checkout/Checkout.jsx"));
 const Account = lazy(() => import("./pages/Account/Account.jsx"));
 const MyOrders = lazy(() => import("./pages/Orders/MyOrders.jsx"));
 
 const OrderConfirmation = lazy(
-  () => import("./pages/OrderConfirmation/OrderConfirmation.jsx")
+  () => import("./pages/OrderConfirmation/OrderConfirmation.jsx"),
 );
 
 import AuthProvider from "./context/AuthProvider.jsx";
@@ -52,12 +52,7 @@ function AppRoutes() {
       {!isAdmin && <SiteHeader />}
 
       <Suspense
-        fallback={
-          <div
-            style={{ minHeight: "60vh" }}
-            aria-busy="true"
-          />
-        }
+        fallback={<div style={{ minHeight: "60vh" }} aria-busy="true" />}
       >
         <Routes>
           {/* Storefront */}
@@ -66,19 +61,13 @@ function AppRoutes() {
 
           <Route path="/shop" element={<Shop />} />
 
-          <Route
-            path="/pre-order"
-            element={<Shop preorderOnly />}
-          />
+          <Route path="/pre-order" element={<Shop preorderOnly />} />
 
           <Route path="/about" element={<About />} />
 
           <Route path="/journal" element={<Journal />} />
 
-          <Route
-            path="/journal/:slug"
-            element={<JournalArticle />}
-          />
+          <Route path="/journal/:slug" element={<JournalArticle />} />
 
           {/* Customer account */}
 
@@ -110,15 +99,9 @@ function AppRoutes() {
             element={<OrderConfirmation />}
           />
 
-          <Route
-            path="/payment-policy"
-            element={<Policy />}
-          />
+          <Route path="/payment-policy" element={<Policy />} />
 
-          <Route
-            path="/shipping-policy"
-            element={<Policy />}
-          />
+          <Route path="/shipping-policy" element={<Policy />} />
 
           {/* Admin dashboard */}
 
@@ -135,20 +118,9 @@ function AppRoutes() {
               </RequireAuth>
             }
           >
-            <Route
-              index
-              element={<AdminDashboard />}
-            />
+            <Route index element={<AdminDashboard />} />
 
-            <Route
-              path="products"
-              element={
-                <AdminModule
-                  title="Products"
-                  description="Manage your store's product catalog."
-                />
-              }
-            />
+            <Route path="products" element={<AdminProducts />} />
 
             <Route
               path="inventory"
@@ -231,10 +203,7 @@ function AppRoutes() {
             />
           </Route>
 
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
-          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
 

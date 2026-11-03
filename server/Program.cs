@@ -24,7 +24,7 @@ builder.Logging.AddFilter(
     "System.Net.Http.HttpClient.TelegramReceiptService",
     LogLevel.Warning);
 
-builder.Services.AddHttpClient<TelegramReceiptService>(client =>
+builder.Services.AddHttpClient<TelegramProductImageService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
@@ -224,6 +224,7 @@ builder.Services
 
 builder.Services.AddScoped<CustomerProfileRepository>();
 builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<ProductImageRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<PaymentSubmissionRepository>();
 builder.Services.AddScoped<ReceiptAnalysisService>();
