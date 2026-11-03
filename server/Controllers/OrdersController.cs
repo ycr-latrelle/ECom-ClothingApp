@@ -12,10 +12,14 @@ namespace server.Api.Controllers;
 public sealed class OrdersController : ControllerBase
 {
     private readonly OrderRepository _repository;
+    private readonly OrderReadRepository _orderReadRepository;
 
-    public OrdersController(OrderRepository repository)
+    public OrdersController(
+        OrderRepository repository,
+        OrderReadRepository orderReadRepository)
     {
         _repository = repository;
+        _orderReadRepository = orderReadRepository;
     }
 
     [HttpPost]
@@ -26,9 +30,7 @@ public sealed class OrdersController : ControllerBase
         var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrWhiteSpace(firebaseUid))
-        {
             return Unauthorized();
-        }
 
         try
         {
@@ -43,5 +45,46 @@ public sealed class OrdersController : ControllerBase
         {
             return BadRequest(new { error = exception.Message });
         }
+    }
+
+    // GET: /api/orders
+    // Returns only orders owned by the authenticated Firebase user.
+    [HttpGet]
+    public async Task<IActionResult> GetMyOrders(
+        CancellationToken cancellationToken)
+    {
+        var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(firebaseUid))
+            return Unauthorized();
+
+        var orders = await _orderReadRepository.GetCustomerOrdersAsync(
+            firebaseUid,
+            cancellationToken);
+
+        return Ok(orders);
+    }
+
+    // GET: /api/orders/{orderId}
+    // Returns an order only if it belongs to the authenticated customer.
+    [HttpGet("{orderId:guid}")]
+    public async Task<IActionResult> GetMyOrder(
+        Guid orderId,
+        CancellationToken cancellationToken)
+    {
+        var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(firebaseUid))
+            return Unauthorized();
+
+        var order = await _orderReadRepository.GetCustomerOrderAsync(
+            orderId,
+            firebaseUid,
+            cancellationToken);
+
+        if (order is null)
+            return NotFound(new { error = "Order not found." });
+
+        return Ok(order);
     }
 }
