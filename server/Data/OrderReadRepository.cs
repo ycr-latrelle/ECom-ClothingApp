@@ -1,4 +1,3 @@
-
 using Npgsql;
 
 namespace server.Api.Data;
@@ -98,6 +97,11 @@ public sealed class OrderReadRepository
             connection,
             order,
             firebaseUid,
+            cancellationToken);
+
+        await LoadStatusHistoryAsync(
+            connection,
+            order,
             cancellationToken);
 
         return order;
@@ -230,6 +234,49 @@ public sealed class OrderReadRepository
             });
         }
     }
+
+    private static async Task LoadStatusHistoryAsync(
+        NpgsqlConnection connection,
+        CustomerOrderDto order,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT
+                id,
+                previous_status,
+                new_status,
+                note,
+                changed_by,
+                created_at
+            FROM app_private.order_status_history
+            WHERE order_id = @order_id
+            ORDER BY created_at ASC, id ASC;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue("order_id", order.Id);
+
+        await using var reader =
+            await command.ExecuteReaderAsync(cancellationToken);
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            order.Events.Add(new CustomerOrderStatusEventDto
+            {
+                Id = reader.GetGuid(0),
+                PreviousStatus = reader.IsDBNull(1)
+                    ? null
+                    : reader.GetString(1),
+                NewStatus = reader.GetString(2),
+                Note = reader.IsDBNull(3)
+                    ? null
+                    : reader.GetString(3),
+                ChangedBy = reader.GetString(4),
+                CreatedAt = reader.GetFieldValue<DateTimeOffset>(5)
+            });
+        }
+    }
 }
 
 public sealed class CustomerOrderDto
@@ -269,9 +316,7 @@ public sealed class CustomerOrderDto
 
     public List<CustomerOrderItemDto> Items { get; set; } = [];
     public List<CustomerPaymentDto> Payments { get; set; } = [];
-
-    // Tracking events will be populated when order status history is implemented.
-    public List<object> Events { get; set; } = [];
+    public List<CustomerOrderStatusEventDto> Events { get; set; } = [];
 }
 
 public sealed class CustomerOrderItemDto
@@ -299,4 +344,14 @@ public sealed class CustomerPaymentDto
     public DateTimeOffset SubmittedAt { get; set; }
     public DateTimeOffset? VerifiedAt { get; set; }
     public string? RejectionReason { get; set; }
+}
+
+public sealed class CustomerOrderStatusEventDto
+{
+    public Guid Id { get; set; }
+    public string? PreviousStatus { get; set; }
+    public string NewStatus { get; set; } = "";
+    public string? Note { get; set; }
+    public string ChangedBy { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
 }

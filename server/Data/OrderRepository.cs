@@ -10,12 +10,11 @@ public sealed class OrderRepository
     private const decimal PreorderDepositPercent = 50m;
 
     private readonly NpgsqlDataSource _dataSource;
-
     private readonly bool _isTest;
 
     public OrderRepository(
-            NpgsqlDataSource dataSource,
-            IConfiguration configuration)
+        NpgsqlDataSource dataSource,
+        IConfiguration configuration)
     {
         _dataSource = dataSource;
         _isTest = configuration.GetValue<bool?>("Orders:IsTest") ?? true;
@@ -86,6 +85,7 @@ public sealed class OrderRepository
 
         await using var connection =
             await _dataSource.OpenConnectionAsync(cancellationToken);
+
         await using var transaction =
             await connection.BeginTransactionAsync(cancellationToken);
 
@@ -249,10 +249,38 @@ public sealed class OrderRepository
             orderCommand.Parameters.AddWithValue("due_today", dueToday);
             orderCommand.Parameters.AddWithValue("balance_later", balanceLater);
             orderCommand.Parameters.AddWithValue("created_at", createdAt);
-
             orderCommand.Parameters.AddWithValue("is_test", _isTest);
 
             await orderCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        // Record the initial order status in the same transaction.
+        const string insertInitialStatusSql = """
+            INSERT INTO app_private.order_status_history (
+                order_id,
+                previous_status,
+                new_status,
+                note,
+                changed_by,
+                created_at
+            )
+            VALUES (
+                @order_id,
+                NULL,
+                'awaiting_payment',
+                'Order created.',
+                'system',
+                @created_at
+            );
+            """;
+
+        await using (var statusCommand =
+                     new NpgsqlCommand(insertInitialStatusSql, connection, transaction))
+        {
+            statusCommand.Parameters.AddWithValue("order_id", orderId);
+            statusCommand.Parameters.AddWithValue("created_at", createdAt);
+
+            await statusCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
         const string insertItemSql = """
@@ -286,8 +314,10 @@ public sealed class OrderRepository
                 itemCommand.Parameters.AddWithValue(
                     "unit_price", line.Product.Price);
                 itemCommand.Parameters.AddWithValue("quantity", (short)line.Quantity);
+
                 itemCommand.Parameters.Add("size", NpgsqlDbType.Text).Value =
                     (object?)line.Size ?? DBNull.Value;
+
                 itemCommand.Parameters.AddWithValue("line_total", line.LineTotal);
 
                 await itemCommand.ExecuteNonQueryAsync(cancellationToken);
