@@ -11,6 +11,8 @@ using server.Api.Authentication;
 using server.Api.Data;
 using server.Api.Health;
 using server.Api.Services;
+using Microsoft.AspNetCore.Authorization;
+using server.Api.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -239,7 +241,39 @@ builder.Services
         "Firebase",
         _ => { });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("OwnerOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(
+            new StoreRoleRequirement("owner"));
+    });
+
+    options.AddPolicy("OwnerOrAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(
+            new StoreRoleRequirement("owner", "admin"));
+    });
+
+    options.AddPolicy("StoreStaff", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(
+            new StoreRoleRequirement(
+                "owner",
+                "admin",
+                "seller"));
+    });
+
+    options.AddPolicy("SellerOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(
+            new StoreRoleRequirement("seller"));
+    });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
