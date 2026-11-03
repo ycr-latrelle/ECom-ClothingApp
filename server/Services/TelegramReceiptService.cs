@@ -1,3 +1,4 @@
+
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -7,12 +8,9 @@ namespace server.Api.Services;
 
 public sealed class TelegramReceiptService
 {
-    private const int MaxPhotoCaptionLength = 1024;
-    private const int MessageChunkLength = 3900;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true,
+        PropertyNameCaseInsensitive = true
     };
 
     private readonly HttpClient _httpClient;
@@ -28,27 +26,25 @@ public sealed class TelegramReceiptService
 
     public async Task<TelegramReceiptReference> SendReceiptPhotoAsync(
         IFormFile photo,
-        string caption,
         CancellationToken cancellationToken = default)
     {
         var (botToken, chatId) = GetTelegramSettings();
-        var captionIsLong = caption.Length > MaxPhotoCaptionLength;
-        var photoCaption = captionIsLong
-            ? BuildShortCaption(caption)
-            : caption;
 
         using var form = new MultipartFormDataContent();
+
         form.Add(new StringContent(chatId), "chat_id");
-        form.Add(new StringContent(photoCaption), "caption");
 
         await using var photoStream = photo.OpenReadStream();
         using var photoContent = new StreamContent(photoStream);
 
-        if (MediaTypeHeaderValue.TryParse(photo.ContentType, out var mediaType))
+        if (MediaTypeHeaderValue.TryParse(
+                photo.ContentType,
+                out var mediaType))
         {
             photoContent.Headers.ContentType = mediaType;
         }
 
+        // Deliberately no caption or customer information.
         form.Add(photoContent, "photo", "payment-receipt");
 
         using var response = await _httpClient.PostAsync(
@@ -56,106 +52,90 @@ public sealed class TelegramReceiptService
             form,
             cancellationToken);
 
-        var telegramResponse = await ReadResponseAsync(response, cancellationToken);
+        var result = await ReadResponseAsync(
+            response,
+            cancellationToken);
 
         if (!response.IsSuccessStatusCode ||
-            telegramResponse?.Ok != true ||
-            telegramResponse.Result is null)
+            result?.Ok != true ||
+            result.Result.ValueKind != JsonValueKind.Object)
         {
             throw new HttpRequestException(
                 $"Telegram photo upload failed: " +
-                $"{telegramResponse?.Description ?? response.StatusCode.ToString()}");
+                $"{result?.Description ?? response.StatusCode.ToString()}");
         }
 
-        var largestPhoto = telegramResponse.Result.Photo?.LastOrDefault();
-        if (largestPhoto is null)
+        var message = result.Result.Deserialize<TelegramMessage>(
+            JsonOptions);
+
+        var largestPhoto = message?.Photo?.LastOrDefault();
+
+        if (message is null ||
+            largestPhoto is null ||
+            string.IsNullOrWhiteSpace(largestPhoto.FileId))
         {
             throw new HttpRequestException(
-                "Telegram accepted the receipt but returned no photo reference.");
-        }
-
-        if (captionIsLong)
-        {
-            await SendFullReceiptTextAsync(
-                botToken,
-                chatId,
-                caption,
-                cancellationToken);
+                "Telegram did not return a usable receipt image reference.");
         }
 
         return new TelegramReceiptReference(
             chatId,
-            telegramResponse.Result.MessageId,
+            message.MessageId,
             largestPhoto.FileId);
+    }
+
+    public async Task<bool> DeleteReceiptMessageAsync(
+        TelegramReceiptReference receipt,
+        CancellationToken cancellationToken = default)
+    {
+        var (botToken, _) = GetTelegramSettings();
+
+        using var content = new FormUrlEncodedContent(
+        [
+            new KeyValuePair<string, string>(
+                "chat_id",
+                receipt.ChatId),
+
+            new KeyValuePair<string, string>(
+                "message_id",
+                receipt.MessageId.ToString())
+        ]);
+
+        using var response = await _httpClient.PostAsync(
+            $"https://api.telegram.org/bot{botToken}/deleteMessage",
+            content,
+            cancellationToken);
+
+        var result = await ReadResponseAsync(
+            response,
+            cancellationToken);
+
+        return response.IsSuccessStatusCode &&
+               result?.Ok == true &&
+               result.Result.ValueKind == JsonValueKind.True;
     }
 
     private (string BotToken, string ChatId) GetTelegramSettings()
     {
         var botToken = _configuration["Telegram:BotToken"];
-        var chatId = _configuration["Telegram:ChatId"];
+
+        var chatId =
+            _configuration["Telegram:PaymentReceiptsChatId"] ??
+            _configuration["Telegram:ChatId"];
 
         if (string.IsNullOrWhiteSpace(botToken))
         {
-            throw new InvalidOperationException("Telegram:BotToken is missing.");
+            throw new InvalidOperationException(
+                "Telegram:BotToken is missing.");
         }
 
         if (string.IsNullOrWhiteSpace(chatId))
         {
-            throw new InvalidOperationException("Telegram:ChatId is missing.");
+            throw new InvalidOperationException(
+                "Telegram:PaymentReceiptsChatId is missing.");
         }
 
         return (botToken, chatId);
-    }
-
-    private static string BuildShortCaption(string caption)
-    {
-        var lines = caption
-            .Replace("\r\n", "\n")
-            .Split('\n');
-
-        // The receipt begins with RECEIPT, order ID, and transaction ID.
-        return string.Join("\n", lines.Take(5)).Trim();
-    }
-
-    private async Task SendFullReceiptTextAsync(
-        string botToken,
-        string chatId,
-        string receiptText,
-        CancellationToken cancellationToken)
-    {
-        foreach (var chunk in SplitText(receiptText, MessageChunkLength))
-        {
-            using var content = new FormUrlEncodedContent(
-            [
-                new KeyValuePair<string, string>("chat_id", chatId),
-                new KeyValuePair<string, string>("text", chunk),
-            ]);
-
-            using var response = await _httpClient.PostAsync(
-                $"https://api.telegram.org/bot{botToken}/sendMessage",
-                content,
-                cancellationToken);
-
-            var telegramResponse = await ReadResponseAsync(
-                response,
-                cancellationToken);
-
-            if (!response.IsSuccessStatusCode || telegramResponse?.Ok != true)
-            {
-                throw new HttpRequestException(
-                    $"Telegram receipt details failed: " +
-                    $"{telegramResponse?.Description ?? response.StatusCode.ToString()}");
-            }
-        }
-    }
-
-    private static IEnumerable<string> SplitText(string text, int chunkLength)
-    {
-        for (var offset = 0; offset < text.Length; offset += chunkLength)
-        {
-            var length = Math.Min(chunkLength, text.Length - offset);
-            yield return text.Substring(offset, length);
-        }
     }
 
     private static async Task<TelegramApiResponse?> ReadResponseAsync(
@@ -186,7 +166,7 @@ public sealed class TelegramReceiptService
         public string? Description { get; init; }
 
         [JsonPropertyName("result")]
-        public TelegramMessage? Result { get; init; }
+        public JsonElement Result { get; init; }
     }
 
     private sealed class TelegramMessage

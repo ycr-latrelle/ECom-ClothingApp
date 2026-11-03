@@ -1,13 +1,13 @@
-using System.Globalization;
+
 using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using server.Api.Data;
 using server.Api.Models;
 using server.Api.Services;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace server.Api.Controllers;
 
@@ -22,7 +22,7 @@ public sealed class PaymentProofController : ControllerBase
         new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg",
-            "image/png",
+            "image/png"
         };
 
     private readonly PaymentSubmissionRepository _repository;
@@ -43,7 +43,7 @@ public sealed class PaymentProofController : ControllerBase
     }
 
     [HttpPost("{orderId:guid}/payment-proof")]
-[EnableRateLimiting("payment-upload")]
+    [EnableRateLimiting("payment-upload")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5_500_000)]
     public async Task<IActionResult> Submit(
@@ -51,23 +51,29 @@ public sealed class PaymentProofController : ControllerBase
         [FromForm] PaymentProofRequest request,
         CancellationToken cancellationToken)
     {
-        var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var firebaseUid = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(firebaseUid))
         {
             return Unauthorized();
         }
 
         var image = request.ProofImage;
+
         if (image is null || image.Length == 0)
         {
-            return BadRequest(new { error = "Choose a receipt image." });
+            return BadRequest(new
+            {
+                error = "Choose a receipt image."
+            });
         }
 
         if (image.Length > MaxImageBytes)
         {
             return BadRequest(new
             {
-                error = "The receipt image must be 5 MB or smaller.",
+                error = "The receipt image must be 5 MB or smaller."
             });
         }
 
@@ -75,7 +81,17 @@ public sealed class PaymentProofController : ControllerBase
         {
             return BadRequest(new
             {
-                error = "Upload a JPEG or PNG receipt image.",
+                error = "Upload a JPEG or PNG receipt image."
+            });
+        }
+
+        if (!await HasValidImageSignatureAsync(
+                image,
+                cancellationToken))
+        {
+            return BadRequest(new
+            {
+                error = "The uploaded file is not a valid JPEG or PNG image."
             });
         }
 
@@ -96,11 +112,12 @@ public sealed class PaymentProofController : ControllerBase
         {
             return Conflict(new
             {
-                error = "This order is not awaiting a payment submission.",
+                error = "This order is not awaiting a payment submission."
             });
         }
 
         var destination = request.PaymentMethod.Trim();
+
         var sourceProvider = string.IsNullOrWhiteSpace(
             request.PaymentSourceProvider)
                 ? destination
@@ -108,6 +125,15 @@ public sealed class PaymentProofController : ControllerBase
 
         var senderName = request.SenderName.Trim();
         var paymentReference = request.PaymentReferenceNumber.Trim();
+
+        if (string.IsNullOrWhiteSpace(senderName) ||
+            string.IsNullOrWhiteSpace(paymentReference))
+        {
+            return BadRequest(new
+            {
+                error = "Sender name and payment reference number are required."
+            });
+        }
 
         ReceiptAnalysisResult receiptAnalysis;
 
@@ -165,69 +191,23 @@ public sealed class PaymentProofController : ControllerBase
             {
                 error = "We couldn't read payment receipt details from this image. Upload a clearer receipt screenshot.",
                 receiptScreeningStatus = "not_receipt",
-                receiptScreeningFlags = receiptAnalysis.Flags,
+                receiptScreeningFlags = receiptAnalysis.Flags
             });
         }
-
-        var address = string.Join(
-            ", ",
-            new[]
-            {
-                order.StreetAddress,
-                $"Barangay {order.Barangay}",
-                order.CityMunicipality,
-                order.Province,
-                order.PostalCode,
-            });
-
-        var latitude = order.DeliveryLatitude.ToString(
-            "R",
-            CultureInfo.InvariantCulture);
-        var longitude = order.DeliveryLongitude.ToString(
-            "R",
-            CultureInfo.InvariantCulture);
-        var mapLink = $"https://maps.google.com/?q={latitude},{longitude}";
-
-        var productDetails = string.Join(
-            "\n",
-            order.Products.Select(product =>
-                $"PRODUCT ID: {product.ProductId}\n" +
-                $"PRODUCT NAME: {product.Name}\n" +
-                $"PRODUCT QUANTITY: {product.Quantity}\n" +
-                $"PRODUCT SIZE: {product.Size ?? "N/A"}"));
-
-        var caption = $"""
-            RECEIPT
-            ___________________________
-            ORDER ID: {order.OrderCode}
-            DATABASE ORDER ID: {order.Id}
-            TRANSACTION ID: {paymentReference}
-
-            FULL NAME: {order.CustomerFullName}
-            EMAIL ADDRESS: {order.CustomerEmail}
-            MOBILE NUMBER: {order.MobileNumber}
-
-            DELIVERY ADDRESS: {address}
-            EXACT LOCATION: {mapLink}
-
-            {productDetails}
-
-            PAYMENT DETAILS
-            SOURCE PROVIDER: {sourceProvider}
-            STORE DESTINATION: {destination}
-            SENDER NAME: {senderName}
-            PAYMENT REFERENCE NUMBER: {paymentReference}
-            AMOUNT DUE: PHP {order.DueToday.ToString("N2", CultureInfo.InvariantCulture)}
-            """;
 
         TelegramReceiptReference telegramReceipt;
 
         try
         {
+            // Telegram stores the image only.
+            // No caption or customer information is sent.
             telegramReceipt = await _telegram.SendReceiptPhotoAsync(
                 image,
-                caption,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception) when (
             exception is HttpRequestException ||
@@ -235,33 +215,61 @@ public sealed class PaymentProofController : ControllerBase
         {
             _logger.LogError(
                 exception,
-                "Could not send payment proof for order {OrderId} to Telegram.",
+                "Could not upload payment receipt for order {OrderId}.",
                 orderId);
 
             return StatusCode(502, new
             {
-                error = "The receipt could not be sent to Telegram. The order is still awaiting submission; try again.",
+                error = "The receipt could not be uploaded. The order is still awaiting submission; try again."
             });
         }
 
-        var saved = await _repository.SavePendingVerificationAsync(
-            order.Id,
-            firebaseUid,
-            destination,
-            sourceProvider,
-            destination,
-            senderName,
-            paymentReference,
-            order.DueToday,
-            receiptAnalysis,
-            telegramReceipt,
-            cancellationToken);
+        bool saved;
+
+        try
+        {
+            saved = await _repository.SavePendingVerificationAsync(
+                order.Id,
+                firebaseUid,
+                destination,
+                sourceProvider,
+                destination,
+                senderName,
+                paymentReference,
+                order.DueToday,
+                receiptAnalysis,
+                telegramReceipt,
+                cancellationToken,
+                image.ContentType,
+                image.Length);
+        }
+        catch (OperationCanceledException)
+        {
+            await TryDeleteTelegramReceiptAsync(telegramReceipt);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            await TryDeleteTelegramReceiptAsync(telegramReceipt);
+
+            _logger.LogError(
+                exception,
+                "Could not save payment submission for order {OrderId}.",
+                orderId);
+
+            return StatusCode(500, new
+            {
+                error = "The payment submission could not be saved. Refresh your order before trying again."
+            });
+        }
 
         if (!saved)
         {
+            await TryDeleteTelegramReceiptAsync(telegramReceipt);
+
             return Conflict(new
             {
-                error = "The order status changed. Refresh the order before submitting payment again.",
+                error = "The order status changed. Refresh the order before submitting payment again."
             });
         }
 
@@ -271,8 +279,67 @@ public sealed class PaymentProofController : ControllerBase
             orderCode = order.OrderCode,
             paymentStatus = "pending_verification",
             receiptScreeningStatus = receiptAnalysis.Status,
-            receiptScreeningFlags = receiptAnalysis.Flags,
+            receiptScreeningFlags = receiptAnalysis.Flags
         });
+    }
+
+    private async Task TryDeleteTelegramReceiptAsync(
+        TelegramReceiptReference receipt)
+    {
+        try
+        {
+            var deleted = await _telegram.DeleteReceiptMessageAsync(
+                receipt,
+                CancellationToken.None);
+
+            if (!deleted)
+            {
+                _logger.LogWarning(
+                    "Telegram receipt cleanup was unsuccessful. ChatId: {ChatId}, MessageId: {MessageId}",
+                    receipt.ChatId,
+                    receipt.MessageId);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Telegram receipt cleanup failed. ChatId: {ChatId}, MessageId: {MessageId}",
+                receipt.ChatId,
+                receipt.MessageId);
+        }
+    }
+
+    private static async Task<bool> HasValidImageSignatureAsync(
+        IFormFile image,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = image.OpenReadStream();
+
+        var header = new byte[8];
+
+        var bytesRead = await stream.ReadAsync(
+            header.AsMemory(0, header.Length),
+            cancellationToken);
+
+        var isJpeg =
+            bytesRead >= 3 &&
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        return isJpeg || isPng;
     }
 
     private static async Task<string> ComputeSha256Async(
