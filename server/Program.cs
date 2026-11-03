@@ -229,6 +229,19 @@ builder.Services.AddScoped<PaymentSubmissionRepository>();
 builder.Services.AddScoped<ReceiptAnalysisService>();
 builder.Services.AddScoped<OrderReadRepository>();
 
+
+// --------------------------------------------------
+// ROLE-BASED AUTHORIZATION SERVICES
+// --------------------------------------------------
+
+builder.Services.AddScoped<UserRoleRepository>();
+builder.Services.AddScoped<StoreRoleService>();
+
+builder.Services.AddScoped<
+    IAuthorizationHandler,
+    StoreAuthorizationHandler>();
+
+
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 // --------------------------------------------------

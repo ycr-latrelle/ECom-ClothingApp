@@ -37,7 +37,8 @@ public sealed class AdminAccessController : ControllerBase
             firebaseUid,
             cancellationToken);
 
-        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        Response.Headers["Cache-Control"] =
+            "no-store, no-cache, must-revalidate";
 
         var isOwner = role == "owner";
         var isAdmin = isOwner || role == "admin";

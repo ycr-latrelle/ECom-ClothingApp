@@ -1,3 +1,4 @@
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using server.Api.Services;
@@ -28,7 +29,7 @@ public sealed class StoreAuthorizationHandler
 
         var role = await _roleService.GetRoleAsync(firebaseUid);
 
-        if (role is null)
+        if (string.IsNullOrWhiteSpace(role))
         {
             return;
         }

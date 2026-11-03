@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace server.Api.Authorization;

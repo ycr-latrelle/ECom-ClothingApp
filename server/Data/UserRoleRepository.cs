@@ -1,3 +1,4 @@
+
 using Npgsql;
 
 namespace server.Api.Data;
@@ -28,7 +29,9 @@ public sealed class UserRoleRepository
 
         await using var command = new NpgsqlCommand(sql, connection);
 
-        command.Parameters.AddWithValue("firebase_uid", firebaseUid);
+        command.Parameters.AddWithValue(
+            "firebase_uid",
+            firebaseUid);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 

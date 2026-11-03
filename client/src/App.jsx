@@ -25,6 +25,7 @@ import JournalArticle from "./pages/JournalArticle/JournalArticle.jsx";
 import Policy from "./pages/Policy/Policy.jsx";
 
 import RequireAuth from "./components/RequireAuth/RequireAuth.jsx";
+import RequireAdmin from "./components/RequireAdmin/RequireAdmin.jsx";
 
 import AdminLayout from "./pages/Admin/AdminLayout.jsx";
 import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
@@ -33,6 +34,7 @@ import AdminModule from "./pages/Admin/AdminModule.jsx";
 const Checkout = lazy(() => import("./pages/Checkout/Checkout.jsx"));
 const Account = lazy(() => import("./pages/Account/Account.jsx"));
 const MyOrders = lazy(() => import("./pages/Orders/MyOrders.jsx"));
+
 const OrderConfirmation = lazy(
   () => import("./pages/OrderConfirmation/OrderConfirmation.jsx")
 );
@@ -61,13 +63,18 @@ function AppRoutes() {
           {/* Storefront */}
 
           <Route path="/" element={<Home />} />
+
           <Route path="/shop" element={<Shop />} />
+
           <Route
             path="/pre-order"
             element={<Shop preorderOnly />}
           />
+
           <Route path="/about" element={<About />} />
+
           <Route path="/journal" element={<Journal />} />
+
           <Route
             path="/journal/:slug"
             element={<JournalArticle />}
@@ -122,7 +129,9 @@ function AppRoutes() {
                 reason="Sign in to access the administration workspace."
                 message="You must sign in before opening the administration workspace."
               >
-                <AdminLayout />
+                <RequireAdmin>
+                  <AdminLayout />
+                </RequireAdmin>
               </RequireAuth>
             }
           >
