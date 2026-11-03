@@ -36,6 +36,7 @@ VITE_FIREBASE_APP_ID=
 | `npm run build` | Production build |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Run ESLint |
+| `npm test` | Run the unit tests for the order helpers (`src/utils/orders.test.js`) |
 
 ## Routes
 
@@ -47,6 +48,7 @@ VITE_FIREBASE_APP_ID=
 | `/payment-policy`, `/shipping-policy` | Policy pages (confirmed facts only) |
 | `/journal`, `/journal/:slug` | Journal and articles |
 | `/account` | Sign in, register, profile |
+| `/account/orders` | My Orders: history, filters and order details drawer (requires sign-in) |
 | `/checkout` | Checkout (requires sign-in) |
 | `/order-confirmation/:orderId` | Order summary and payment-proof upload |
 

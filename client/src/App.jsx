@@ -15,6 +15,7 @@ import JournalArticle from "./pages/JournalArticle/JournalArticle.jsx";
 import Policy from "./pages/Policy/Policy.jsx";
 const Checkout = lazy(() => import("./pages/Checkout/Checkout.jsx"));
 const Account = lazy(() => import("./pages/Account/Account.jsx"));
+const MyOrders = lazy(() => import("./pages/Orders/MyOrders.jsx"));
 import RequireAuth from "./components/RequireAuth/RequireAuth.jsx";
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation/OrderConfirmation.jsx"));
 
@@ -38,6 +39,17 @@ export default function App() {
               <Route path="/journal" element={<Journal />} />
               <Route path="/journal/:slug" element={<JournalArticle />} />
               <Route path="/account" element={<Account />} />
+              <Route
+                path="/account/orders"
+                element={
+                  <RequireAuth
+                    reason="Sign in to see your orders."
+                    message="You need to be signed in to see your orders."
+                  >
+                    <MyOrders />
+                  </RequireAuth>
+                }
+              />
               <Route
                 path="/checkout"
                 element={

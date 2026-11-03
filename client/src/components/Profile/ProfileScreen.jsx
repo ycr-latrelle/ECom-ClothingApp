@@ -4,6 +4,7 @@ import { useAuth } from '../../context/useAuth.js';
 import { friendlyAuthError } from '../Account/authErrors.js';
 import { AboutFields, AddressFields, NameFields } from '../Account/ProfileFieldGroups.jsx';
 import { formatAddress, fullName, genderLabel } from '../Account/profileFields.js';
+import AccountNav from '../Orders/AccountNav.jsx';
 import AvatarCustomizer from './AvatarCustomizer.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import ProfileSection from './ProfileSection.jsx';
@@ -105,6 +106,8 @@ export default function ProfileScreen({ onSignedOut }) {
 
   return (
     <main className="profile-page">
+      <AccountNav />
+
       <header className="profile-hero">
         <ProfileAvatar name={profile.firstName} prefs={prefs} size={96} />
         <div className="profile-hero-text">

@@ -4,14 +4,18 @@ import { useAuth } from '../../context/useAuth.js';
 import { useAuthPanel } from '../../context/useAuthPanel.js';
 import './RequireAuth.css';
 
-const REASON = 'Sign in or create an account to continue to checkout.';
+const CHECKOUT_REASON = 'Sign in or create an account to continue to checkout.';
 
 // Wrap a route element to make it available to signed-in customers only.
 // Signed-out visitors (for example, someone opening /checkout directly) see the
 // floating sign-in panel over this page. Once they finish, the page they wanted
 // appears in place, with router state such as QuickCheckout's `directItem` intact.
 // Closing the panel sends them back to the shop.
-export default function RequireAuth({ children }) {
+export default function RequireAuth({
+  children,
+  reason = CHECKOUT_REASON,
+  message = 'You need an account to check out.',
+}) {
   const { user, loading, profile, profileLoading } = useAuth();
   const { requireAuth } = useAuthPanel();
   const navigate = useNavigate();
@@ -24,10 +28,10 @@ export default function RequireAuth({ children }) {
     if (!needsAuth) return;
 
     requireAuth(null, {
-      reason: REASON,
+      reason,
       onCancel: () => navigate('/shop', { replace: true }),
     });
-  }, [needsAuth, requireAuth, navigate]);
+  }, [needsAuth, requireAuth, navigate, reason]);
 
   if (checking) {
     return (
@@ -41,13 +45,13 @@ export default function RequireAuth({ children }) {
     return (
       <main className="require-auth-prompt">
         <h1>Sign in to continue</h1>
-        <p>You need an account to check out.</p>
+        <p>{message}</p>
         <button
           type="button"
           className="require-auth-button"
           onClick={() =>
             requireAuth(null, {
-              reason: REASON,
+              reason,
               onCancel: () => navigate('/shop', { replace: true }),
             })
           }
