@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using server.Api.Data;
 using server.Api.Models;
 using server.Api.Services;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace server.Api.Controllers;
 
@@ -42,6 +43,7 @@ public sealed class PaymentProofController : ControllerBase
     }
 
     [HttpPost("{orderId:guid}/payment-proof")]
+[EnableRateLimiting("payment-upload")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5_500_000)]
     public async Task<IActionResult> Submit(
