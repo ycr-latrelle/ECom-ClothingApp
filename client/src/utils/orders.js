@@ -157,18 +157,41 @@ function normalizeShipment(raw) {
   return Object.values(result).some(present) ? result : null;
 }
 
+
 function normalizeEvents(raw) {
   const list = pick(raw, ['timeline', 'events', 'statusHistory', 'history']);
 
   return toArray(list)
-    .map((event) => ({
-      key: statusKey(pick(event, ['status', 'type', 'event', 'title'])),
-      title: toText(pick(event, ['title', 'label'])),
-      description: toText(pick(event, ['description', 'note', 'message'])),
-      at: toText(pick(event, ['createdAt', 'occurredAt', 'timestamp', 'at'])),
-    }))
+    .map((event) => {
+      const status = pick(event, [
+        'newStatus',
+        'new_status',
+        'status',
+        'type',
+        'event',
+        'title',
+      ]);
+
+      return {
+        key: statusKey(status),
+        title: toText(pick(event, ['title', 'label'])),
+        description: toText(
+          pick(event, ['description', 'note', 'message']),
+        ),
+        at: toText(
+          pick(event, [
+            'createdAt',
+            'created_at',
+            'occurredAt',
+            'timestamp',
+            'at',
+          ]),
+        ),
+      };
+    })
     .filter((event) => event.key || event.title);
 }
+
 
 export function normalizeOrder(raw) {
   const id = toText(pick(raw, ['id', 'orderId']));

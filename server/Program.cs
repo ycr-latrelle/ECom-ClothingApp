@@ -1,4 +1,3 @@
-
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using FirebaseAdmin;
@@ -15,6 +14,10 @@ using server.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --------------------------------------------------
+// TELEGRAM HTTP CLIENT
+// --------------------------------------------------
+
 builder.Logging.AddFilter(
     "System.Net.Http.HttpClient.TelegramReceiptService",
     LogLevel.Warning);
@@ -23,6 +26,10 @@ builder.Services.AddHttpClient<TelegramReceiptService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+
+// --------------------------------------------------
+// CORS
+// --------------------------------------------------
 
 const string ClientCorsPolicy = "ClientCorsPolicy";
 
@@ -34,6 +41,7 @@ if (builder.Environment.IsDevelopment())
 {
     allowedOrigins = allowedOrigins
         .Append("http://localhost:5173")
+        .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
 }
 
@@ -54,9 +62,10 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
-    // Global limit:
+    // Global rate limit:
     // Authenticated users: 120 requests per minute.
     // Anonymous visitors: 60 requests per minute.
+
     options.GlobalLimiter =
         PartitionedRateLimiter.Create<HttpContext, string>(context =>
         {
@@ -81,7 +90,9 @@ builder.Services.AddRateLimiter(options =>
                 });
         });
 
-    // Additional protection for payment receipt submissions.
+    // Additional protection for payment receipt submissions:
+    // 5 submissions per minute per Firebase user.
+
     options.AddPolicy("payment-upload", context =>
     {
         var firebaseUid = context.User.FindFirstValue(
@@ -139,7 +150,9 @@ builder.Services.AddOutputCache(options =>
 // FIREBASE
 // --------------------------------------------------
 
-var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
+var firebaseProjectId =
+    builder.Configuration["Firebase:ProjectId"];
+
 var serviceAccountPath =
     builder.Configuration["Firebase:ServiceAccountPath"];
 
@@ -166,6 +179,7 @@ FirebaseApp.Create(new AppOptions
     Credential = CredentialFactory
         .FromFile<ServiceAccountCredential>(fullServiceAccountPath)
         .ToGoogleCredential(),
+
     ProjectId = firebaseProjectId
 });
 
@@ -244,17 +258,25 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseHttpsRedirection();
+
 app.UseCors(ClientCorsPolicy);
 
+// 1. Authenticate the incoming request.
+// Firebase UID becomes available to subsequent middleware.
 app.UseAuthentication();
-app.UseAuthorization();
 
-// Run rate limiting after authentication so Firebase UID
-// is available for authenticated-user partitions.
+// 2. Apply global and endpoint-specific rate limits.
 app.UseRateLimiter();
 
-// Output caching runs after authorization.
+// 3. Enforce authorization requirements.
+app.UseAuthorization();
+
+// 4. Apply output caching after authorization.
 app.UseOutputCache();
+
+// --------------------------------------------------
+// HEALTH ENDPOINTS
+// --------------------------------------------------
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
@@ -265,6 +287,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
 });
+
+// --------------------------------------------------
+// CONTROLLERS
+// --------------------------------------------------
 
 app.MapControllers();
 
