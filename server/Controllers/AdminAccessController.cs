@@ -19,6 +19,9 @@ public sealed class AdminAccessController : ControllerBase
     }
 
     [HttpGet("access")]
+    [ResponseCache(
+        NoStore = true,
+        Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> GetAccess(
         CancellationToken cancellationToken)
     {
@@ -34,13 +37,18 @@ public sealed class AdminAccessController : ControllerBase
             firebaseUid,
             cancellationToken);
 
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+
+        var isOwner = role == "owner";
+        var isAdmin = isOwner || role == "admin";
+
         return Ok(new
         {
             role = role ?? "customer",
-            isAdmin = role is "owner" or "admin",
-            isOwner = role == "owner",
+            isAdmin,
+            isOwner,
             isSeller = role == "seller",
-            canManageRoles = role == "owner"
+            canManageRoles = isOwner
         });
     }
 }

@@ -1,17 +1,15 @@
-
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using server.Api.Services;
 
 namespace server.Api.Authorization;
 
-public sealed class StoreRoleAuthorizationHandler
+public sealed class StoreAuthorizationHandler
     : AuthorizationHandler<StoreRoleRequirement>
 {
     private readonly StoreRoleService _roleService;
 
-    public StoreRoleAuthorizationHandler(
-        StoreRoleService roleService)
+    public StoreAuthorizationHandler(StoreRoleService roleService)
     {
         _roleService = roleService;
     }

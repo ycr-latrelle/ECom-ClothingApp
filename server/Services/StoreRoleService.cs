@@ -1,4 +1,3 @@
-
 using server.Api.Data;
 
 namespace server.Api.Services;
@@ -20,9 +19,10 @@ public sealed class StoreRoleService
         string firebaseUid,
         CancellationToken cancellationToken = default)
     {
-        var ownerFirebaseUid = _configuration["Firebase:OwnerFirebaseUid"];
+        var ownerFirebaseUid =
+            _configuration["Firebase:OwnerFirebaseUid"];
 
-        // Owner is configured outside the role-assignment table.
+        // Owner is configured through backend configuration.
         if (!string.IsNullOrWhiteSpace(ownerFirebaseUid) &&
             string.Equals(
                 firebaseUid,

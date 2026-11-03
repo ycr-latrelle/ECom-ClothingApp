@@ -243,23 +243,29 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
+    // Owner only
     options.AddPolicy("OwnerOnly", policy =>
     {
         policy.RequireAuthenticatedUser();
+
         policy.AddRequirements(
             new StoreRoleRequirement("owner"));
     });
 
+    // Owner and Admin
     options.AddPolicy("OwnerOrAdmin", policy =>
     {
         policy.RequireAuthenticatedUser();
+
         policy.AddRequirements(
             new StoreRoleRequirement("owner", "admin"));
     });
 
+    // Owner, Admin and Seller
     options.AddPolicy("StoreStaff", policy =>
     {
         policy.RequireAuthenticatedUser();
+
         policy.AddRequirements(
             new StoreRoleRequirement(
                 "owner",
@@ -267,9 +273,11 @@ builder.Services.AddAuthorization(options =>
                 "seller"));
     });
 
+    // Seller only
     options.AddPolicy("SellerOnly", policy =>
     {
         policy.RequireAuthenticatedUser();
+
         policy.AddRequirements(
             new StoreRoleRequirement("seller"));
     });
