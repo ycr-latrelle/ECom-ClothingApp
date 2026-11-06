@@ -4,57 +4,13 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(
   '',
 );
 
-export const INVENTORY_API_CONFIG = {
-  listPath: '/api/admin/inventory',
-  summaryPath: '/api/admin/inventory/summary',
-  adjustPath: null,
-
-  mapRecords(rawResponse) {
-    if (!Array.isArray(rawResponse)) {
-      throw new Error('The inventory API returned an unexpected response.');
-    }
-
-    return rawResponse.map((item) => ({
-      productId: item.productId,
-      stock: Number(item.stock ?? 0),
-      sku: item.sku ?? null,
-      lowStockThreshold:
-        item.lowStockThreshold == null
-          ? null
-          : Number(item.lowStockThreshold),
-      updatedAt: item.updatedAt ?? null,
-    }));
-  },
-
-  mapSummary(rawResponse) {
-    if (!rawResponse || typeof rawResponse !== 'object') {
-      throw new Error('The inventory summary API returned an unexpected response.');
-    }
-
-    return {
-      totalStockUnits: Number(rawResponse.totalStockUnits ?? 0),
-      lowStockProducts: Number(rawResponse.lowStockProducts ?? 0),
-      outOfStockProducts: Number(rawResponse.outOfStockProducts ?? 0),
-    };
-  },
-};
+const INVENTORY_URL = `${API_BASE_URL}/api/admin/inventory`;
 
 export class InventoryUnavailableError extends Error {
-  constructor(message = 'The inventory API is not available yet.') {
+  constructor(message = 'The inventory API is not available.') {
     super(message);
     this.name = 'InventoryUnavailableError';
   }
-}
-
-export function getInventoryCapabilities() {
-  const { listPath, summaryPath, adjustPath, mapRecords, mapSummary } =
-    INVENTORY_API_CONFIG;
-
-  return {
-    list: Boolean(listPath && mapRecords),
-    summary: Boolean(summaryPath && mapSummary),
-    adjust: Boolean(adjustPath),
-  };
 }
 
 async function getAuthHeaders(user) {
@@ -66,28 +22,26 @@ async function getAuthHeaders(user) {
     throw new Error('You must be signed in to manage inventory.');
   }
 
-  const token = await user.getIdToken();
-
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${await user.getIdToken()}`,
   };
 }
 
 async function handleResponse(response) {
   const responseText = await response.text();
-
   let result = null;
 
   try {
     result = responseText ? JSON.parse(responseText) : null;
   } catch {
-    // Keep the response as null when it is not JSON.
+    // The response may not contain JSON.
   }
 
   if (!response.ok) {
     throw new Error(
       result?.error ||
         result?.title ||
+        result?.message ||
         `Request failed (HTTP ${response.status}).`,
     );
   }
@@ -95,68 +49,88 @@ async function handleResponse(response) {
   return result;
 }
 
-export async function fetchInventory(user) {
-  const { listPath, mapRecords } = INVENTORY_API_CONFIG;
-
-  if (!listPath || !mapRecords) {
-    throw new InventoryUnavailableError();
+function toNumber(value, fallback = null) {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
   }
 
-  const headers = await getAuthHeaders(user);
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
 
-  const response = await fetch(`${API_BASE_URL}${listPath}`, {
-    method: 'GET',
-    headers,
-    cache: 'no-store',
-  });
+export function mapInventoryRecord(item) {
+  return {
+    productId: item.productId,
+    productName: item.productName ?? '',
+    color: item.color ?? null,
+    size: item.size ?? null,
+    sku: item.sku ?? null,
+    onHandQuantity: toNumber(item.onHandQuantity, 0),
+    reservedQuantity: toNumber(item.reservedQuantity, 0),
+    availableQuantity: toNumber(item.availableQuantity, 0),
+    lowStockThreshold: toNumber(item.lowStockThreshold),
+    updatedAt: item.updatedAt ?? null,
+  };
+}
 
-  const records = mapRecords(await handleResponse(response));
-
-  if (!Array.isArray(records)) {
+export function mapInventoryRecords(rawResponse) {
+  if (!Array.isArray(rawResponse)) {
     throw new Error('The inventory API returned an unexpected response.');
   }
 
-  return records;
+  return rawResponse.map(mapInventoryRecord);
 }
 
-export async function fetchInventorySummary(user) {
-  const { summaryPath, mapSummary } = INVENTORY_API_CONFIG;
-
-  if (!summaryPath || !mapSummary) {
-    throw new InventoryUnavailableError();
+export function mapInventorySummary(rawResponse) {
+  if (!rawResponse || typeof rawResponse !== 'object') {
+    throw new Error('The inventory summary API returned an unexpected response.');
   }
 
+  return {
+    totalStockUnits: toNumber(rawResponse.totalStockUnits, 0),
+    lowStockProducts: toNumber(rawResponse.lowStockProducts, 0),
+    outOfStockProducts: toNumber(rawResponse.outOfStockProducts, 0),
+  };
+}
+
+export async function fetchInventory(user) {
   const headers = await getAuthHeaders(user);
 
-  const response = await fetch(`${API_BASE_URL}${summaryPath}`, {
+  const response = await fetch(INVENTORY_URL, {
     method: 'GET',
     headers,
     cache: 'no-store',
   });
 
-  return mapSummary(await handleResponse(response));
+  return mapInventoryRecords(await handleResponse(response));
 }
 
-// Stock adjustment remains disabled until its backend workflow is implemented.
-export async function adjustInventoryStock(user, productId, payload) {
-  const { adjustPath } = INVENTORY_API_CONFIG;
-
-  if (!adjustPath) {
-    throw new InventoryUnavailableError(
-      'Stock adjustment is not available yet.',
-    );
-  }
-
+export async function fetchInventorySummary(user) {
   const headers = await getAuthHeaders(user);
 
-  const response = await fetch(`${API_BASE_URL}${adjustPath(productId)}`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const response = await fetch(`${INVENTORY_URL}/summary`, {
+    method: 'GET',
+    headers,
+    cache: 'no-store',
   });
+
+  return mapInventorySummary(await handleResponse(response));
+}
+
+export async function adjustInventoryStock(user, payload) {
+  const headers = await getAuthHeaders(user);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/inventory/stock`,
+    {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  );
 
   return handleResponse(response);
 }

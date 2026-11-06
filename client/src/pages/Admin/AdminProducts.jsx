@@ -10,11 +10,13 @@ import {
   uploadAdminProductImage,
 } from "../../api/adminProductApi.js";
 import { resolveImageUrl } from "../../utils/imageUrl.js";
+import { adjustInventoryStock } from "../../api/inventoryApi.js";
 import "./AdminProducts.css";
 
 const PAGE_SIZE = 8;
 const MAX_IMAGE_COUNT = 10;
 const MAX_IMAGE_SIZE = 20_000_000;
+const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 
 const formatPeso = (value) =>
   new Intl.NumberFormat("en-PH", {
@@ -42,10 +44,33 @@ const getProductImage = (product) =>
   product?.image || product?.imagePath || product?.image_path || "";
 
 const getProductStatus = (product) => product?.status || "ready";
+
 const getActive = (product) =>
   product?.isActive ?? product?.is_active ?? true;
+
 const getMock = (product) =>
   product?.isMock ?? product?.is_mock ?? false;
+
+const parseVariantValues = (value) => [
+  ...new Set(
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ),
+];
+
+const getVariantStockKey = (color, size) =>
+  `${color.toLowerCase()}::${size.toUpperCase()}`;
+
+const buildVariantRows = (colors, sizes) =>
+  colors.flatMap((color) =>
+    sizes.map((size) => ({
+      color,
+      size,
+      key: getVariantStockKey(color, size),
+    })),
+  );
 
 const emptyForm = {
   name: "",
@@ -55,6 +80,7 @@ const emptyForm = {
   category: "tops",
   status: "ready",
   sizes: "",
+  colors: "",
   isActive: true,
   isMock: false,
 };
@@ -85,6 +111,9 @@ export default function AdminProducts() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Initial stock is only entered when creating a new product.
+  const [initialStocks, setInitialStocks] = useState({});
+
   const refreshProducts = useCallback(async () => {
     if (!user) {
       setLocalProducts([]);
@@ -110,7 +139,6 @@ export default function AdminProducts() {
     refreshProducts();
   }, [refreshProducts]);
 
-  // Create temporary preview URLs for newly selected images.
   useEffect(() => {
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
 
@@ -288,6 +316,7 @@ export default function AdminProducts() {
   function openCreateForm() {
     setEditingProduct(null);
     setForm({ ...emptyForm });
+    setInitialStocks({});
     setSlugEdited(false);
     setFormError("");
     setSelectedProduct(null);
@@ -306,10 +335,13 @@ export default function AdminProducts() {
       category: product.category || "tops",
       status: getProductStatus(product),
       sizes: Array.isArray(product.sizes) ? product.sizes.join(", ") : "",
+      colors: Array.isArray(product.colors) ? product.colors.join(", ") : "",
       isActive: getActive(product),
       isMock: getMock(product),
     });
 
+    // Do not create or modify stock when editing existing products.
+    setInitialStocks({});
     setSlugEdited(true);
     setFormError("");
     setSelectedProduct(null);
@@ -323,6 +355,7 @@ export default function AdminProducts() {
     setFormOpen(false);
     setEditingProduct(null);
     setForm({ ...emptyForm });
+    setInitialStocks({});
     setSlugEdited(false);
     setFormError("");
     resetImages();
@@ -348,6 +381,28 @@ export default function AdminProducts() {
       return next;
     });
   }
+
+  function handleInitialStockChange(key, value) {
+    setInitialStocks((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  const formColors = useMemo(
+    () => parseVariantValues(form.colors),
+    [form.colors],
+  );
+
+  const formSizes = useMemo(
+    () => parseVariantValues(form.sizes),
+    [form.sizes],
+  );
+
+  const initialVariantRows = useMemo(
+    () => buildVariantRows(formColors, formSizes),
+    [formColors, formSizes],
+  );
 
   async function handleSave(event) {
     event.preventDefault();
@@ -387,6 +442,55 @@ export default function AdminProducts() {
       return;
     }
 
+    const colors = parseVariantValues(form.colors);
+    const sizes = parseVariantValues(form.sizes);
+
+    if (!editingProduct && (colors.length === 0 || sizes.length === 0)) {
+      setFormError(
+        "Enter at least one color and one size before creating a product.",
+      );
+      return;
+    }
+
+    if (!editingProduct && initialVariantRows.length > 100) {
+      setFormError(
+        "A product cannot have more than 100 color-size combinations.",
+      );
+      return;
+    }
+
+    if (!editingProduct) {
+      const missingStock = initialVariantRows.find(
+        (variant) =>
+          initialStocks[variant.key] === undefined ||
+          String(initialStocks[variant.key]).trim() === "",
+      );
+
+      if (missingStock) {
+        setFormError(
+          `Enter the initial stock quantity for ${missingStock.color} / ${missingStock.size}. Use 0 if there is no stock.`,
+        );
+        return;
+      }
+
+      const invalidStock = initialVariantRows.find((variant) => {
+        const value = Number(initialStocks[variant.key]);
+
+        return (
+          !Number.isInteger(value) ||
+          value < 0 ||
+          value > 2_147_483_647
+        );
+      });
+
+      if (invalidStock) {
+        setFormError(
+          `Stock for ${invalidStock.color} / ${invalidStock.size} must be a whole number greater than or equal to zero.`,
+        );
+        return;
+      }
+    }
+
     const duplicateSlug = localProducts.some(
       (product) =>
         product.slug === normalizedSlug &&
@@ -409,10 +513,8 @@ export default function AdminProducts() {
       price: Number(form.price),
       category: form.category,
       status: form.status,
-      sizes: form.sizes
-        .split(",")
-        .map((size) => size.trim())
-        .filter(Boolean),
+      sizes,
+      colors,
       isActive: form.isActive,
       isMock: form.isMock,
     };
@@ -421,6 +523,7 @@ export default function AdminProducts() {
 
     let savedProduct = null;
     let uploadedCount = 0;
+    let savedStockCount = 0;
 
     try {
       if (editingProduct) {
@@ -433,10 +536,34 @@ export default function AdminProducts() {
         savedProduct = await createAdminProduct(user, productData);
       }
 
-      // Upload each image individually. The backend stores the files
-      // in the private Telegram product-images channel.
+      const productId = savedProduct?.id ?? savedProduct?.productId;
+
+      if (!productId) {
+        throw new Error(
+          "The product API did not return a product ID. The product may have been created, but its initial stock could not be saved.",
+        );
+      }
+
+      // Create inventory rows for each manually entered color-size pair.
+      // The API receives the final on-hand quantity for each combination.
+      if (!editingProduct) {
+        for (const variant of initialVariantRows) {
+          const stock = Number(initialStocks[variant.key]);
+
+          await adjustInventoryStock(user, productId, {
+            color: variant.color,
+            size: variant.size,
+            stock,
+            lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+          });
+
+          savedStockCount += 1;
+        }
+      }
+
+      // Upload each image individually.
       for (const file of imageFiles) {
-        await uploadAdminProductImage(user, savedProduct.id, file);
+        await uploadAdminProductImage(user, productId, file);
         uploadedCount += 1;
       }
 
@@ -445,21 +572,30 @@ export default function AdminProducts() {
       setNotice(
         editingProduct
           ? `Product "${name}" updated successfully.`
-          : `Product "${name}" created successfully.`,
+          : `Product "${name}" created successfully with ${savedStockCount} inventory variant(s).`,
       );
 
       setFormOpen(false);
       setEditingProduct(null);
       setForm({ ...emptyForm });
+      setInitialStocks({});
       setSlugEdited(false);
       resetImages();
       setPage(1);
     } catch (error) {
-      // The product may already have been saved if an image upload failed.
-      // Refresh the catalog so the UI reflects the actual server state.
       await refreshProducts();
 
-      if (savedProduct && imageFiles.length > uploadedCount) {
+      if (savedProduct && !editingProduct && savedStockCount < initialVariantRows.length) {
+        const failedVariant = initialVariantRows[savedStockCount];
+
+        setFormError(
+          `The product "${name}" was created, but inventory setup stopped after ${savedStockCount} of ${initialVariantRows.length} variants. ${
+            failedVariant
+              ? `The next variant was ${failedVariant.color} / ${failedVariant.size}. `
+              : ""
+          }${error.message} Open the Inventory page and complete the missing stock entries.`,
+        );
+      } else if (savedProduct && imageFiles.length > uploadedCount) {
         setFormError(
           `The product was saved, but an image upload failed after ${uploadedCount} successful upload(s). ${error.message} You can edit the product and upload the remaining images.`,
         );
@@ -863,6 +999,9 @@ export default function AdminProducts() {
         onMakeMain={makeMainImage}
         saving={saving}
         slugEdited={slugEdited}
+        initialVariantRows={initialVariantRows}
+        initialStocks={initialStocks}
+        onInitialStockChange={handleInitialStockChange}
       />
     </section>
   );
@@ -903,8 +1042,7 @@ function ProductDetails({ product, onClose, onEdit, user }) {
   }, [user, product.id]);
 
   const primaryImage =
-    images.find((image) => image.isPrimary) ||
-    images[0];
+    images.find((image) => image.isPrimary) || images[0];
 
   const imageUrl = primaryImage?.url
     ? resolveImageUrl(primaryImage.url)
@@ -966,6 +1104,14 @@ function ProductDetails({ product, onClose, onEdit, user }) {
             <div>
               <span>Availability</span>
               <strong>{getProductStatus(product)}</strong>
+            </div>
+            <div>
+              <span>Colors</span>
+              <strong>
+                {Array.isArray(product.colors) && product.colors.length
+                  ? product.colors.join(", ")
+                  : "Not specified"}
+              </strong>
             </div>
             <div>
               <span>Sizes</span>
@@ -1031,9 +1177,13 @@ function ProductForm({
   onMakeMain,
   saving,
   slugEdited,
+  initialVariantRows,
+  initialStocks,
+  onInitialStockChange,
 }) {
   const [dragging, setDragging] = useState(false);
   const [failedImage, setFailedImage] = useState("");
+
   const urlFailed = failedImage !== "" && failedImage === form.image;
 
   useEffect(() => {
@@ -1083,7 +1233,7 @@ function ProductForm({
             <p>
               {editing
                 ? "Update product information and upload additional images."
-                : "Create a product listing and upload its images."}
+                : "Create a product listing, define its variants, and enter initial stock."}
             </p>
           </div>
 
@@ -1269,15 +1419,91 @@ function ProductForm({
           </label>
 
           <label className="ap-form-full">
+            Colors
+            <input
+              name="colors"
+              value={form.colors}
+              onChange={onChange}
+              placeholder="Black, White, Navy Blue"
+              disabled={Boolean(editing)}
+            />
+            <small>
+              Separate colors with commas.
+              {editing
+                ? " Color changes are disabled while editing to protect existing inventory variants."
+                : ""}
+            </small>
+          </label>
+
+          <label className="ap-form-full">
             Sizes
             <input
               name="sizes"
               value={form.sizes}
               onChange={onChange}
               placeholder="S, M, L, XL"
+              disabled={Boolean(editing)}
             />
-            <small>Separate sizes with commas.</small>
+            <small>
+              Separate sizes with commas.
+              {editing
+                ? " Size changes are disabled while editing to protect existing inventory variants."
+                : ""}
+            </small>
           </label>
+
+          {!editing && initialVariantRows.length > 0 && (
+            <div className="ap-initial-stock-section ap-form-full">
+              <div className="ap-initial-stock-heading">
+                <div>
+                  <strong>Initial variant stock</strong>
+                  <p>
+                    Enter the actual available physical quantity for each
+                    color-size combination. Enter 0 if none is available.
+                  </p>
+                </div>
+                <span>{initialVariantRows.length} variants</span>
+              </div>
+
+              <div className="ap-initial-stock-table-wrap">
+                <table className="ap-initial-stock-table">
+                  <thead>
+                    <tr>
+                      <th>Color</th>
+                      <th>Size</th>
+                      <th>Initial stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {initialVariantRows.map((variant) => (
+                      <tr key={variant.key}>
+                        <td>{variant.color}</td>
+                        <td>{variant.size}</td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            placeholder="Enter quantity"
+                            value={initialStocks[variant.key] ?? ""}
+                            onChange={(event) =>
+                              onInitialStockChange(
+                                variant.key,
+                                event.target.value,
+                              )
+                            }
+                            disabled={saving}
+                            aria-label={`Initial stock for ${variant.color}, size ${variant.size}`}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="ap-form-checkboxes ap-form-full">
             <label>

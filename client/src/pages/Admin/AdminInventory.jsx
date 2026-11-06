@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
 import { fetchAdminProducts } from '../../api/adminProductApi.js';
 import {
+  adjustInventoryStock,
   fetchInventory,
   fetchInventorySummary,
-  getInventoryCapabilities,
-  InventoryUnavailableError,
 } from '../../api/inventoryApi.js';
 import ProductImage from '../../components/ProductImage/ProductImage.jsx';
 import {
@@ -14,26 +14,16 @@ import {
   getInventoryStatus,
   getProductAvailability,
   getProductImage,
-  getStockQuantity,
+  getProductStockTotal,
   INVENTORY_STATUS,
   INVENTORY_STATUS_LABELS,
   isProductActive,
   sortInventoryRows,
 } from '../../utils/inventory.js';
-// The Products screen owns the shared table, toolbar, modal and state styles
-// (ap-*). Importing it here keeps them loaded wherever this screen is opened.
 import './AdminProducts.css';
 import './AdminInventory.css';
 
 const PAGE_SIZE = 8;
-
-const PENDING_HINT = 'Pending backend: the inventory API is not connected yet.';
-const ADJUST_HINT =
-  'Stock adjustment is not available until the inventory backend is connected.';
-
-// Read once: the API configuration is static for the lifetime of the page.
-const capabilities = getInventoryCapabilities();
-
 const numberFormat = new Intl.NumberFormat('en-PH');
 
 const dateFormat = new Intl.DateTimeFormat('en-PH', {
@@ -41,32 +31,31 @@ const dateFormat = new Intl.DateTimeFormat('en-PH', {
   timeStyle: 'short',
 });
 
-function formatUpdated(value) {
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? dateFormat.format(time) : null;
+function formatDate(value) {
+  if (!value) return '—';
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? dateFormat.format(timestamp) : '—';
 }
 
 export default function AdminInventory() {
   const { user } = useAuth();
 
   const [reloadKey, setReloadKey] = useState(0);
-
   const [catalog, setCatalog] = useState({
     status: 'loading',
     products: [],
     error: '',
   });
-
-  // status: unavailable (no backend) | loading | ready | error
   const [inventory, setInventory] = useState({
-    status: capabilities.list ? 'loading' : 'unavailable',
+    status: 'loading',
     records: [],
     error: '',
   });
-
   const [summary, setSummary] = useState({
-    status: capabilities.summary ? 'loading' : 'unavailable',
+    status: 'loading',
     data: null,
+    error: '',
   });
 
   const [search, setSearch] = useState('');
@@ -76,19 +65,23 @@ export default function AdminInventory() {
   const [sort, setSort] = useState('default');
   const [page, setPage] = useState(1);
 
-  const [selectedRow, setSelectedRow] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [adjustingProduct, setAdjustingProduct] = useState(null);
+  const [notice, setNotice] = useState(null);
 
-  // Product catalog (existing admin products API).
   useEffect(() => {
     if (!user) return undefined;
 
     let cancelled = false;
 
-    fetchAdminProducts(user)
-      .then((products) => {
-        if (!cancelled) setCatalog({ status: 'ready', products, error: '' });
-      })
-      .catch((error) => {
+    async function loadCatalog() {
+      try {
+        const products = await fetchAdminProducts(user);
+
+        if (!cancelled) {
+          setCatalog({ status: 'ready', products, error: '' });
+        }
+      } catch (error) {
         if (!cancelled) {
           setCatalog({
             status: 'error',
@@ -96,101 +89,102 @@ export default function AdminInventory() {
             error: error.message || 'Could not load products.',
           });
         }
-      });
+      }
+    }
+
+    loadCatalog();
 
     return () => {
       cancelled = true;
     };
   }, [user, reloadKey]);
 
-  // Inventory records. Skipped entirely while no backend capability exists.
   useEffect(() => {
-    if (!capabilities.list || !user) return undefined;
+    if (!user) return undefined;
 
     let cancelled = false;
 
-    fetchInventory(user)
-      .then((records) => {
-        if (!cancelled) setInventory({ status: 'ready', records, error: '' });
-      })
-      .catch((error) => {
-        if (cancelled) return;
+    async function loadInventory() {
+      try {
+        const records = await fetchInventory(user);
 
-        if (error instanceof InventoryUnavailableError) {
-          setInventory({ status: 'unavailable', records: [], error: '' });
-        } else {
+        if (!cancelled) {
+          setInventory({ status: 'ready', records, error: '' });
+        }
+      } catch (error) {
+        if (!cancelled) {
           setInventory({
             status: 'error',
             records: [],
             error: error.message || 'Could not load inventory.',
           });
         }
-      });
+      }
+    }
+
+    loadInventory();
 
     return () => {
       cancelled = true;
     };
   }, [user, reloadKey]);
 
-  // Overview figures.
   useEffect(() => {
-    if (!capabilities.summary || !user) return undefined;
+    if (!user) return undefined;
 
     let cancelled = false;
 
-    fetchInventorySummary(user)
-      .then((data) => {
-        if (!cancelled) setSummary({ status: 'ready', data });
-      })
-      .catch((error) => {
-        if (cancelled) return;
+    async function loadSummary() {
+      try {
+        const data = await fetchInventorySummary(user);
 
-        setSummary({
-          status:
-            error instanceof InventoryUnavailableError
-              ? 'unavailable'
-              : 'error',
-          data: null,
-        });
-      });
+        if (!cancelled) {
+          setSummary({ status: 'ready', data, error: '' });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSummary({
+            status: 'error',
+            data: null,
+            error: error.message || 'Could not load summary.',
+          });
+        }
+      }
+    }
+
+    loadSummary();
 
     return () => {
       cancelled = true;
     };
   }, [user, reloadKey]);
 
-  function reload() {
+  const reload = useCallback(() => {
     setCatalog((current) => ({ ...current, status: 'loading', error: '' }));
-
-    if (capabilities.list) {
-      setInventory((current) => ({ ...current, status: 'loading', error: '' }));
-    }
-
-    if (capabilities.summary) {
-      setSummary((current) => ({ ...current, status: 'loading' }));
-    }
-
+    setInventory((current) => ({ ...current, status: 'loading', error: '' }));
+    setSummary((current) => ({ ...current, status: 'loading', error: '' }));
+    setNotice(null);
     setReloadKey((value) => value + 1);
-  }
+  }, []);
 
-  const catalogStatus = user ? catalog.status : 'error';
-  const catalogError = user
-    ? catalog.error
-    : 'You must be signed in to view inventory.';
+  const recordsByProduct = useMemo(() => {
+    const map = new Map();
 
-  const recordsByProduct = useMemo(
-    () =>
-      new Map(
-        inventory.records.map((record) => [String(record.productId), record]),
-      ),
-    [inventory.records],
-  );
+    for (const record of inventory.records) {
+      const key = String(record.productId);
+
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(record);
+    }
+
+    return map;
+  }, [inventory.records]);
 
   const rows = useMemo(
     () =>
       catalog.products.map((product) => ({
         product,
-        record: recordsByProduct.get(String(product.id)) ?? null,
+        records: recordsByProduct.get(String(product.id)) || [],
       })),
     [catalog.products, recordsByProduct],
   );
@@ -221,14 +215,10 @@ export default function AdminInventory() {
 
   const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-
   const pageRows = visibleRows.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
-
-  // Stock-based filtering and sorting only make sense with real stock data.
-  const hasStockData = inventory.status === 'ready';
 
   function updateFilter(setter, value) {
     setter(value);
@@ -250,6 +240,8 @@ export default function AdminInventory() {
     productStatus !== 'all' ||
     inventoryStatus !== 'all';
 
+  const inventoryReady = inventory.status === 'ready';
+
   return (
     <section className="admin-products admin-inventory">
       <header className="admin-products-heading">
@@ -257,77 +249,98 @@ export default function AdminInventory() {
           <p className="eyebrow">STORE MANAGEMENT</p>
           <h1>Inventory</h1>
           <p className="admin-page-description">
-            Monitor stock levels and product availability.
+            Manage stock for every product color and size.
           </p>
         </div>
 
-        <Link to="/admin/products" className="ap-secondary-button">
-          Manage products
-        </Link>
+        <div className="ai-heading-actions">
+          <button
+            type="button"
+            className="ap-secondary-button"
+            onClick={reload}
+            disabled={
+              catalog.status === 'loading' ||
+              inventory.status === 'loading'
+            }
+          >
+            Refresh
+          </button>
+
+          <Link to="/admin/products" className="ap-secondary-button">
+            Manage products
+          </Link>
+        </div>
       </header>
 
-      {inventory.status === 'unavailable' && (
-        <div className="ap-preview-notice" role="status">
-          <span className="ap-notice-icon" aria-hidden="true">
-            i
-          </span>
-          <p>
-            <strong>Inventory tracking is not connected yet.</strong> Stock
-            quantities, inventory status and last-updated times will appear
-            here once the inventory API is available. Product details are
-            loaded from the live catalog. The low-stock threshold is pending
-            backend configuration.
-          </p>
+      {notice && (
+        <div
+          className={`ap-preview-notice ${
+            notice.type === 'error' ? 'ai-notice-error' : 'ai-notice-success'
+          }`}
+          role={notice.type === 'error' ? 'alert' : 'status'}
+        >
+          <p>{notice.message}</p>
+          <button
+            type="button"
+            className="ai-link-button"
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss notification"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
       {inventory.status === 'error' && (
         <div className="ap-preview-notice ai-notice-error" role="alert">
-          <span className="ap-notice-icon" aria-hidden="true">
-            !
-          </span>
           <p>
-            <strong>Inventory could not be loaded.</strong> {inventory.error}{' '}
-            <button type="button" className="ai-link-button" onClick={reload}>
-              Try again
-            </button>
+            <strong>Inventory could not be loaded.</strong> {inventory.error}
+          </p>
+        </div>
+      )}
+
+      {catalog.status === 'error' && (
+        <div className="ap-preview-notice ai-notice-error" role="alert">
+          <p>
+            <strong>Products could not be loaded.</strong> {catalog.error}
           </p>
         </div>
       )}
 
       <div className="ap-summary-grid">
-        <article className="ap-summary-card">
-          <span>Total products</span>
-          <strong>
-            {catalogStatus === 'ready' ? catalog.products.length : '—'}
-          </strong>
-          <small>Products in the catalog</small>
-        </article>
-
         <SummaryCard
-          label="Total stock units"
-          summary={summary}
-          read={(data) => data.totalStockUnits}
+          label="Total products"
+          value={catalog.status === 'ready' ? catalog.products.length : null}
+          note="Products in the catalog"
+          loading={catalog.status === 'loading'}
         />
-
+        <SummaryCard
+          label="Total available units"
+          value={summary.data?.totalStockUnits}
+          note="Available stock across variants"
+          loading={summary.status === 'loading'}
+        />
         <SummaryCard
           label="Low stock products"
-          summary={summary}
-          read={(data) => data.lowStockProducts}
+          value={summary.data?.lowStockProducts}
+          note="Products at or below threshold"
+          loading={summary.status === 'loading'}
         />
-
         <SummaryCard
           label="Out of stock products"
-          summary={summary}
-          read={(data) => data.outOfStockProducts}
+          value={summary.data?.outOfStockProducts}
+          note="Products with no available units"
+          loading={summary.status === 'loading'}
         />
       </div>
 
       <section className="ap-catalog-panel">
         <div className="ap-catalog-header">
           <div>
-            <h2>Inventory</h2>
-            <p>Search, filter, and review stock for your store products.</p>
+            <h2>Product inventory</h2>
+            <p>
+              Select a product to view and adjust its color-size stock.
+            </p>
           </div>
 
           <span className="ap-result-count">
@@ -343,8 +356,8 @@ export default function AdminInventory() {
               type="search"
               value={search}
               onChange={(event) => updateFilter(setSearch, event.target.value)}
-              placeholder="Search product name or SKU..."
-              aria-label="Search inventory by product name or SKU"
+              placeholder="Search product, color, size or SKU..."
+              aria-label="Search inventory"
             />
           </label>
 
@@ -356,9 +369,7 @@ export default function AdminInventory() {
             >
               <option value="all">All categories</option>
               {categories.map((item) => (
-                <option value={item} key={item}>
-                  {item}
-                </option>
+                <option value={item} key={item}>{item}</option>
               ))}
             </select>
           </label>
@@ -386,12 +397,9 @@ export default function AdminInventory() {
               onChange={(event) =>
                 updateFilter(setInventoryStatus, event.target.value)
               }
-              disabled={!hasStockData}
-              title={hasStockData ? undefined : PENDING_HINT}
+              disabled={!inventoryReady}
             >
-              <option value="all">
-                {hasStockData ? 'All inventory' : 'Pending backend'}
-              </option>
+              <option value="all">All inventory</option>
               <option value={INVENTORY_STATUS.IN_STOCK}>In stock</option>
               <option value={INVENTORY_STATUS.LOW_STOCK}>Low stock</option>
               <option value={INVENTORY_STATUS.OUT_OF_STOCK}>
@@ -409,40 +417,32 @@ export default function AdminInventory() {
               <option value="default">Default order</option>
               <option value="name-asc">Name: A to Z</option>
               <option value="name-desc">Name: Z to A</option>
-              <option value="stock-asc" disabled={!hasStockData}>
-                Stock: low to high{hasStockData ? '' : ' (pending backend)'}
+              <option value="stock-asc" disabled={!inventoryReady}>
+                Stock: low to high
               </option>
-              <option value="stock-desc" disabled={!hasStockData}>
-                Stock: high to low{hasStockData ? '' : ' (pending backend)'}
-              </option>
-              <option value="updated-desc" disabled={!hasStockData}>
-                Last updated: newest{hasStockData ? '' : ' (pending backend)'}
-              </option>
-              <option value="updated-asc" disabled={!hasStockData}>
-                Last updated: oldest{hasStockData ? '' : ' (pending backend)'}
+              <option value="stock-desc" disabled={!inventoryReady}>
+                Stock: high to low
               </option>
             </select>
           </label>
         </div>
 
-        {catalogStatus === 'loading' ? (
+        {catalog.status === 'loading' || inventory.status === 'loading' ? (
           <div className="ap-state" role="status">
             <span className="ap-loader" />
-            <p>Loading inventory...</p>
+            <p>Loading product inventory...</p>
           </div>
-        ) : catalogStatus === 'error' ? (
+        ) : catalog.status === 'error' || inventory.status === 'error' ? (
           <div className="ap-state ap-state-error" role="alert">
-            <strong>Products could not be loaded.</strong>
-            <p>{catalogError}</p>
-            {user && (
-              <button
-                type="button"
-                className="ap-secondary-button"
-                onClick={reload}
-              >
-                Try again
-              </button>
-            )}
+            <strong>Inventory is not ready.</strong>
+            <p>Resolve the error above, then refresh this page.</p>
+            <button
+              type="button"
+              className="ap-secondary-button"
+              onClick={reload}
+            >
+              Try again
+            </button>
           </div>
         ) : catalog.products.length === 0 ? (
           <div className="ap-state">
@@ -475,181 +475,117 @@ export default function AdminInventory() {
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>SKU / Product ID</th>
-                    <th>Category</th>
-                    <th>Available stock</th>
-                    <th>Product status</th>
+                    <th>Variants</th>
+                    <th>Available units</th>
                     <th>Inventory status</th>
-                    <th>Last updated</th>
-                    <th aria-label="Actions" />
+                    <th>Product status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {pageRows.map((row) => {
-                    const { product, record } = row;
-
-                    return (
-                      <tr key={product.id}>
-                        <td>
+                  {pageRows.map(({ product, records }) => (
+                    <tr key={product.id}>
+                      <td>
+                        <button
+                          type="button"
+                          className="ap-product-identity"
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          <span className="ap-product-thumb">
+                            <ProductImage
+                              src={getProductImage(product)}
+                              alt=""
+                              loading="lazy"
+                            />
+                          </span>
+                          <span className="ap-product-name">
+                            <strong>{product.name}</strong>
+                            <small>{product.category || 'Uncategorized'}</small>
+                          </span>
+                        </button>
+                      </td>
+                      <td>{records.length}</td>
+                      <td>
+                        <strong className="ai-stock">
+                          {numberFormat.format(getProductStockTotal(records))}
+                        </strong>
+                      </td>
+                      <td>
+                        <ProductInventoryStatus records={records} />
+                      </td>
+                      <td>
+                        <ProductStatus product={product} />
+                      </td>
+                      <td>
+                        <div className="ap-row-actions ai-actions">
                           <button
                             type="button"
-                            className="ap-product-identity"
-                            onClick={() => setSelectedRow(row)}
+                            onClick={() => setSelectedProduct(product)}
                           >
-                            <span className="ap-product-thumb">
-                              <ProductImage
-                                src={getProductImage(product)}
-                                alt=""
-                                loading="lazy"
-                              />
-                            </span>
-
-                            <span className="ap-product-name">
-                              <strong>{product.name}</strong>
-                              <small>{product.slug || 'No slug'}</small>
-                            </span>
+                            View
                           </button>
-                        </td>
-
-                        <td>
-                          <span
-                            className="ai-identifier"
-                            title={record?.sku || String(product.id)}
+                          <button
+                            type="button"
+                            onClick={() => setAdjustingProduct(product)}
                           >
-                            {record?.sku || product.id}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span className="ap-category-label">
-                            {product.category || 'Uncategorized'}
-                          </span>
-                        </td>
-
-                        <td>
-                          <InventoryField
-                            state={inventory.status}
-                            record={record}
-                            read={(item) => {
-                              const stock = getStockQuantity(item);
-                              return stock === null ? null : (
-                                <strong className="ai-stock">
-                                  {numberFormat.format(stock)}
-                                </strong>
-                              );
-                            }}
-                          />
-                        </td>
-
-                        <td>
-                          <ProductStatus product={product} />
-                        </td>
-
-                        <td>
-                          <InventoryStatusBadge
-                            state={inventory.status}
-                            record={record}
-                          />
-                        </td>
-
-                        <td>
-                          <InventoryField
-                            state={inventory.status}
-                            record={record}
-                            read={(item) => formatUpdated(item.updatedAt)}
-                          />
-                        </td>
-
-                        <td>
-                          <RowActions onView={() => setSelectedRow(row)} />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            Adjust stock
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
             <div className="ap-mobile-list">
-              {pageRows.map((row) => {
-                const { product, record } = row;
-
-                return (
-                  <article className="ap-mobile-product" key={product.id}>
-                    <div className="ap-mobile-product-main">
-                      <span className="ap-product-thumb">
-                        <ProductImage
-                          src={getProductImage(product)}
-                          alt=""
-                          loading="lazy"
-                        />
-                      </span>
-
-                      <div className="ap-product-name">
-                        <strong>{product.name}</strong>
-                        <small>{product.category || 'Uncategorized'}</small>
-                      </div>
+              {pageRows.map(({ product, records }) => (
+                <article className="ap-mobile-product" key={product.id}>
+                  <div className="ap-mobile-product-main">
+                    <span className="ap-product-thumb">
+                      <ProductImage
+                        src={getProductImage(product)}
+                        alt=""
+                        loading="lazy"
+                      />
+                    </span>
+                    <div className="ap-product-name">
+                      <strong>{product.name}</strong>
+                      <small>{product.category || 'Uncategorized'}</small>
                     </div>
+                  </div>
 
-                    <dl className="ai-mobile-facts">
-                      <div>
-                        <dt>SKU / ID</dt>
-                        <dd className="ai-identifier">
-                          {record?.sku || product.id}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Stock</dt>
-                        <dd>
-                          <InventoryField
-                            state={inventory.status}
-                            record={record}
-                            read={(item) => {
-                              const stock = getStockQuantity(item);
-                              return stock === null ? null : (
-                                <strong className="ai-stock">
-                                  {numberFormat.format(stock)}
-                                </strong>
-                              );
-                            }}
-                          />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Inventory</dt>
-                        <dd>
-                          <InventoryStatusBadge
-                            state={inventory.status}
-                            record={record}
-                          />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Product</dt>
-                        <dd>
-                          <ProductStatus product={product} />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Updated</dt>
-                        <dd>
-                          <InventoryField
-                            state={inventory.status}
-                            record={record}
-                            read={(item) => formatUpdated(item.updatedAt)}
-                          />
-                        </dd>
-                      </div>
-                    </dl>
+                  <dl className="ai-mobile-facts">
+                    <div>
+                      <dt>Variants</dt>
+                      <dd>{records.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Available units</dt>
+                      <dd>{numberFormat.format(getProductStockTotal(records))}</dd>
+                    </div>
+                    <div>
+                      <dt>Inventory status</dt>
+                      <dd><ProductInventoryStatus records={records} /></dd>
+                    </div>
+                  </dl>
 
-                    <RowActions
-                      className="ap-mobile-product-actions"
-                      onView={() => setSelectedRow(row)}
-                    />
-                  </article>
-                );
-              })}
+                  <div className="ap-mobile-product-actions ai-actions">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdjustingProduct(product)}
+                    >
+                      Adjust stock
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
 
             <div className="ap-pagination">
@@ -658,7 +594,6 @@ export default function AdminInventory() {
                 {Math.min(currentPage * PAGE_SIZE, visibleRows.length)} of{' '}
                 {visibleRows.length}
               </span>
-
               <div>
                 <button
                   type="button"
@@ -667,11 +602,7 @@ export default function AdminInventory() {
                 >
                   Previous
                 </button>
-
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-
+                <span>Page {currentPage} of {totalPages}</span>
                 <button
                   type="button"
                   disabled={currentPage === totalPages}
@@ -687,52 +618,76 @@ export default function AdminInventory() {
         )}
       </section>
 
-      {selectedRow && (
+      {selectedProduct && (
         <InventoryDetails
-          row={selectedRow}
-          inventoryState={inventory.status}
-          onClose={() => setSelectedRow(null)}
+          product={selectedProduct}
+          records={recordsByProduct.get(String(selectedProduct.id)) || []}
+          onClose={() => setSelectedProduct(null)}
+          onAdjust={() => {
+            setAdjustingProduct(selectedProduct);
+            setSelectedProduct(null);
+          }}
+        />
+      )}
+
+      {adjustingProduct && (
+        <StockAdjustmentModal
+          product={adjustingProduct}
+          records={recordsByProduct.get(String(adjustingProduct.id)) || []}
+          user={user}
+          onClose={() => setAdjustingProduct(null)}
+          onSaved={() => {
+            setAdjustingProduct(null);
+            setNotice({
+              type: 'success',
+              message: 'Stock adjustment saved successfully.',
+            });
+            reload();
+          }}
+          onError={(message) =>
+            setNotice({ type: 'error', message })
+          }
         />
       )}
     </section>
   );
 }
 
-// Renders a value that comes from the inventory record, or the honest reason
-// it is not shown. `read` returns a node/string, or null if the record has
-// no value for that field.
-function InventoryField({ state, record, read }) {
-  if (state === 'ready') {
-    if (!record) return <span className="ai-muted">No record</span>;
-
-    return read(record) ?? <span className="ai-muted">Not provided</span>;
-  }
-
-  if (state === 'loading') return <span className="ai-muted">Loading…</span>;
-  if (state === 'error') return <span className="ai-muted">Unavailable</span>;
-
+function SummaryCard({ label, value, note, loading }) {
   return (
-    <span className="ai-muted" title={PENDING_HINT}>
-      Pending backend
-    </span>
+    <article className="ap-summary-card">
+      <span>{label}</span>
+      <strong>
+        {loading || value === null || value === undefined
+          ? '—'
+          : numberFormat.format(Number(value))}
+      </strong>
+      <small>{loading ? 'Loading...' : note}</small>
+    </article>
   );
 }
 
-function InventoryStatusBadge({ state, record }) {
-  return (
-    <InventoryField
-      state={state}
-      record={record}
-      read={(item) => {
-        const status = getInventoryStatus(item);
+function ProductInventoryStatus({ records }) {
+  if (!records.length) {
+    return <span className="ai-inventory-pill unknown">No variants</span>;
+  }
 
-        return (
-          <span className={`ai-inventory-pill ${status}`}>
-            {INVENTORY_STATUS_LABELS[status]}
-          </span>
-        );
-      }}
-    />
+  const statuses = records.map(getInventoryStatus);
+
+  let status = INVENTORY_STATUS.IN_STOCK;
+
+  if (statuses.every((item) => item === INVENTORY_STATUS.OUT_OF_STOCK)) {
+    status = INVENTORY_STATUS.OUT_OF_STOCK;
+  } else if (statuses.includes(INVENTORY_STATUS.LOW_STOCK)) {
+    status = INVENTORY_STATUS.LOW_STOCK;
+  } else if (statuses.includes(INVENTORY_STATUS.UNKNOWN)) {
+    status = INVENTORY_STATUS.UNKNOWN;
+  }
+
+  return (
+    <span className={`ai-inventory-pill ${status}`}>
+      {INVENTORY_STATUS_LABELS[status]}
+    </span>
   );
 }
 
@@ -746,7 +701,6 @@ function ProductStatus({ product }) {
         <span />
         {active ? 'Active' : 'Inactive'}
       </span>
-
       <span className={`ap-status-pill ${preorder ? 'preorder' : 'ready'}`}>
         {preorder ? 'Pre-order' : 'Ready stock'}
       </span>
@@ -754,58 +708,305 @@ function ProductStatus({ product }) {
   );
 }
 
-function RowActions({ onView, className = 'ap-row-actions' }) {
+function InventoryDetails({ product, records, onClose, onAdjust }) {
+  useModalEscape(onClose);
+
   return (
-    <div className={`${className} ai-actions`}>
-      <button type="button" onClick={onView}>
-        View
-      </button>
+    <div
+      className="ap-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="ap-modal ap-product-detail ai-variant-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-detail-title"
+      >
+        <div className="ap-modal-header">
+          <div>
+            <p className="eyebrow">INVENTORY DETAILS</p>
+            <h2 id="ai-detail-title">{product.name}</h2>
+          </div>
+          <button
+            type="button"
+            className="ap-modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
 
-      <button type="button" disabled title={ADJUST_HINT}>
-        Adjust stock
-      </button>
+        <div className="ai-detail-product">
+          <ProductImage src={getProductImage(product)} alt={product.name} />
+          <div>
+            <span>{product.category || 'Uncategorized'}</span>
+            <strong>{numberFormat.format(getProductStockTotal(records))} available units</strong>
+            <small>{records.length} color-size variants</small>
+          </div>
+        </div>
 
-      <Link to="/admin/products" className="ai-row-link">
-        Manage product
-      </Link>
+        <div className="ai-variant-table-wrap">
+          <table className="ai-variant-table">
+            <thead>
+              <tr>
+                <th>Color</th>
+                <th>Size</th>
+                <th>On hand</th>
+                <th>Reserved</th>
+                <th>Available</th>
+                <th>Threshold</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.length ? records.map((record) => (
+                <tr key={`${record.color || ''}-${record.size || ''}`}>
+                  <td>{record.color || '—'}</td>
+                  <td>{record.size || '—'}</td>
+                  <td>{record.onHandQuantity}</td>
+                  <td>{record.reservedQuantity}</td>
+                  <td><strong>{record.availableQuantity}</strong></td>
+                  <td>{record.lowStockThreshold ?? '—'}</td>
+                  <td>{formatDate(record.updatedAt)}</td>
+                </tr>
+              )) : (
+                <tr><td colSpan="7">No inventory variants have been created.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="ap-modal-footer">
+          <button type="button" className="ap-secondary-button" onClick={onClose}>
+            Close
+          </button>
+          <button type="button" className="ap-primary-button" onClick={onAdjust}>
+            Adjust stock
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
 
-function SummaryCard({ label, summary, read }) {
-  let value = 'Unavailable';
-  let note = 'Pending inventory API';
+function StockAdjustmentModal({ product, records, user, onClose, onSaved, onError }) {
+  const [color, setColor] = useState('');
+  const [size, setSize] = useState('');
+  const [stock, setStock] = useState('');
+  const [threshold, setThreshold] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  if (summary.status === 'loading') {
-    value = '—';
-    note = 'Loading…';
-  } else if (summary.status === 'error') {
-    note = 'Could not be loaded';
-  } else if (summary.status === 'ready') {
-    const figure = Number(read(summary.data));
+  useModalEscape(() => {
+    if (!saving) onClose();
+  });
 
-    if (Number.isFinite(figure)) {
-      value = numberFormat.format(figure);
-      note = 'From the inventory API';
+  const colors = Array.isArray(product.colors) ? product.colors : [];
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+
+  const selectedRecord = records.find(
+    (record) =>
+      (record.color || '') === color &&
+      (record.size || '') === size,
+  );
+
+  useEffect(() => {
+    if (!selectedRecord) {
+      setStock('');
+      setThreshold('');
+      return;
+    }
+
+    setStock(String(selectedRecord.onHandQuantity));
+    setThreshold(
+      selectedRecord.lowStockThreshold == null
+        ? ''
+        : String(selectedRecord.lowStockThreshold),
+    );
+  }, [selectedRecord]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError('');
+
+    if (!color || !size) {
+      setError('Select both a color and a size.');
+      return;
+    }
+
+    if (stock === '' || !Number.isInteger(Number(stock)) || Number(stock) < 0) {
+      setError('Enter a valid non-negative whole-number stock quantity.');
+      return;
+    }
+
+    if (
+      threshold !== '' &&
+      (!Number.isInteger(Number(threshold)) || Number(threshold) < 0)
+    ) {
+      setError('Enter a valid non-negative whole-number threshold.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await adjustInventoryStock(user, {
+        productId: product.id,
+        color,
+        size,
+        stock: Number(stock),
+        lowStockThreshold: threshold === '' ? null : Number(threshold),
+      });
+
+      onSaved();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not save the stock adjustment.');
+      onError(requestError.message || 'Could not save the stock adjustment.');
+    } finally {
+      setSaving(false);
     }
   }
 
-  const known = note === 'From the inventory API';
+  const selectedColorSizeExists = Boolean(selectedRecord);
 
   return (
-    <article className="ap-summary-card">
-      <span>{label}</span>
-      <strong className={known || value === '—' ? undefined : 'ai-pending-value'}>
-        {value}
-      </strong>
-      <small>{note}</small>
-    </article>
+    <div
+      className="ap-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
+    >
+      <section
+        className="ap-modal ap-form-modal ai-stock-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-stock-title"
+      >
+        <div className="ap-modal-header">
+          <div>
+            <p className="eyebrow">INVENTORY MANAGEMENT</p>
+            <h2 id="ai-stock-title">Adjust stock</h2>
+            <p>{product.name}</p>
+          </div>
+          <button
+            type="button"
+            className="ap-modal-close"
+            onClick={onClose}
+            disabled={saving}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <form className="ap-product-form" onSubmit={handleSubmit}>
+          <label>
+            Color *
+            <select
+              value={color}
+              onChange={(event) => setColor(event.target.value)}
+              required
+            >
+              <option value="">Select color</option>
+              {colors.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Size *
+            <select
+              value={size}
+              onChange={(event) => setSize(event.target.value)}
+              required
+            >
+              <option value="">Select size</option>
+              {sizes.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+
+          {color && size && (
+            <div className="ai-current-stock ap-form-full">
+              {selectedColorSizeExists ? (
+                <>
+                  <span>Current inventory</span>
+                  <strong>
+                    {selectedRecord.onHandQuantity} on hand ·{' '}
+                    {selectedRecord.reservedQuantity} reserved ·{' '}
+                    {selectedRecord.availableQuantity} available
+                  </strong>
+                </>
+              ) : (
+                <span>This color-size variant has no inventory record yet.</span>
+              )}
+            </div>
+          )}
+
+          <label>
+            On-hand stock *
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={stock}
+              onChange={(event) => setStock(event.target.value)}
+              required
+            />
+            <small>
+              Enter the final physical stock quantity. Reserved units cannot be
+              removed from the on-hand quantity.
+            </small>
+          </label>
+
+          <label>
+            Low-stock threshold
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={threshold}
+              onChange={(event) => setThreshold(event.target.value)}
+              placeholder="Optional"
+            />
+            <small>Available stock at or below this value is marked low.</small>
+          </label>
+
+          {error && (
+            <p className="ap-form-error ap-form-full" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="ap-modal-footer ap-form-full">
+            <button
+              type="button"
+              className="ap-secondary-button"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="ap-primary-button"
+              disabled={saving || !colors.length || !sizes.length}
+            >
+              {saving ? 'Saving...' : 'Save stock'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
-function InventoryDetails({ row, inventoryState, onClose }) {
-  const { product, record } = row;
-
+function useModalEscape(onClose) {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') onClose();
@@ -820,130 +1021,4 @@ function InventoryDetails({ row, inventoryState, onClose }) {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
-
-  const active = isProductActive(product);
-
-  return (
-    <div
-      className="ap-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        className="ap-modal ap-product-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-detail-title"
-      >
-        <div className="ap-modal-header">
-          <div>
-            <p className="eyebrow">INVENTORY DETAILS</p>
-            <h2 id="ai-detail-title">{product.name}</h2>
-          </div>
-
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="ap-detail-body">
-          <div className="ap-detail-image">
-            <ProductImage src={getProductImage(product)} alt={product.name} />
-          </div>
-
-          <div className="ap-detail-information">
-            <div>
-              <span>Product ID</span>
-              <strong className="ai-identifier-wrap">{product.id}</strong>
-            </div>
-
-            {record?.sku && (
-              <div>
-                <span>SKU</span>
-                <strong>{record.sku}</strong>
-              </div>
-            )}
-
-            <div>
-              <span>Category</span>
-              <strong>{product.category || '—'}</strong>
-            </div>
-
-            <div>
-              <span>Product status</span>
-              <strong>{active ? 'Active' : 'Inactive'}</strong>
-            </div>
-
-            <div>
-              <span>Availability</span>
-              <strong>
-                {getProductAvailability(product) === 'pre-order'
-                  ? 'Pre-order'
-                  : 'Ready stock'}
-              </strong>
-            </div>
-
-            <div>
-              <span>Current stock</span>
-              <strong>
-                <InventoryField
-                  state={inventoryState}
-                  record={record}
-                  read={(item) => {
-                    const stock = getStockQuantity(item);
-                    return stock === null ? null : numberFormat.format(stock);
-                  }}
-                />
-              </strong>
-            </div>
-
-            <div>
-              <span>Inventory status</span>
-              <strong>
-                <InventoryStatusBadge state={inventoryState} record={record} />
-              </strong>
-            </div>
-
-            <div>
-              <span>Last updated</span>
-              <strong>
-                <InventoryField
-                  state={inventoryState}
-                  record={record}
-                  read={(item) => formatUpdated(item.updatedAt)}
-                />
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="ap-modal-footer ai-detail-footer">
-          <small className="ai-footer-hint">{ADJUST_HINT}</small>
-
-          <button type="button" className="ap-secondary-button" onClick={onClose}>
-            Close
-          </button>
-
-          <Link to="/admin/products" className="ap-secondary-button">
-            Manage product
-          </Link>
-
-          <button
-            type="button"
-            className="ap-primary-button"
-            disabled
-            title={ADJUST_HINT}
-          >
-            Adjust stock
-          </button>
-        </div>
-      </section>
-    </div>
-  );
 }
