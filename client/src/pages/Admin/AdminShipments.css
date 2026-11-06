@@ -1,0 +1,599 @@
+
+.admin-shipments {
+  --ash-ink: #172a39;
+  --ash-ink-soft: #46535b;
+  --ash-muted: #858d92;
+  --ash-faint: #a0a6a9;
+  --ash-line: #e8e8e5;
+  --ash-surface: #fff;
+  min-width: 0;
+  padding-bottom: 32px;
+}
+
+/* ---------- Header ---------- */
+.admin-shipments .admin-products-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.admin-shipments .admin-products-heading h1 {
+  margin: 5px 0 6px;
+  color: var(--ash-ink);
+}
+
+.admin-shipments .admin-page-description {
+  margin: 0;
+  color: var(--ash-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ---------- API preview notice ---------- */
+.ash-preview-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border: 1px solid #e8e4d9;
+  border-radius: 4px;
+  background: #faf8f2;
+  color: #6e6654;
+}
+
+.ash-notice-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 1px solid #b8a879;
+  border-radius: 50%;
+  color: #8b7741;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ash-preview-notice p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.ash-preview-notice strong {
+  color: #4f493b;
+}
+
+/* ---------- Summary cards ---------- */
+.admin-shipments .ash-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 17px;
+}
+
+.ash-summary-card {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  min-height: 122px;
+  padding: 19px 20px;
+  border: 1px solid var(--ash-line);
+  border-radius: 4px;
+  background: var(--ash-surface);
+}
+
+.ash-summary-card > span {
+  color: #7b838a;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.ash-summary-card > strong {
+  display: block;
+  margin: 12px 0 5px;
+  color: var(--ash-ink);
+  font-family: var(--font-heading);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.ash-summary-card > small {
+  color: #92999e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* ---------- Secondary summary ---------- */
+.ash-secondary-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 22px;
+  color: var(--ash-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.ash-secondary-summary strong {
+  color: var(--ash-ink);
+  font-weight: 600;
+}
+
+/* ---------- Shipment panel ---------- */
+.admin-shipments .ash-catalog-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ash-line);
+  border-radius: 4px;
+  background: var(--ash-surface);
+  box-shadow: 0 2px 8px rgb(23 42 57 / 3%);
+}
+
+.admin-shipments .ap-catalog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 78px;
+  padding: 20px 22px;
+}
+
+.admin-shipments .ap-catalog-header h2 {
+  margin: 0 0 4px;
+  color: var(--ash-ink);
+  font-size: 16px;
+}
+
+.admin-shipments .ap-catalog-header p {
+  margin: 0;
+  color: var(--ash-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ---------- Toolbar ---------- */
+.admin-shipments .ash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--ash-line);
+  border-bottom: 1px solid var(--ash-line);
+  background: #fcfcfb;
+}
+
+.admin-shipments .ap-search {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.admin-shipments .ap-filter {
+  min-width: 140px;
+}
+
+.ash-clear-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ash-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s, border-color .18s;
+}
+
+.ash-clear-button:hover {
+  border-color: #d8dcd9;
+  background: #fff;
+  color: var(--ash-ink);
+}
+
+/* ---------- Shipment table ---------- */
+.admin-shipments .ap-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ash-table {
+  width: 100%;
+  min-width: 1160px;
+  border-collapse: collapse;
+}
+
+.ash-table th,
+.ash-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f0f0ed;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ash-table th {
+  background: #fcfcfb;
+  color: #858d92;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.ash-table td {
+  color: var(--ash-ink-soft);
+  font-size: 11px;
+}
+
+.ash-table tbody tr {
+  transition: background .15s;
+}
+
+.ash-table tbody tr:hover td {
+  background: #fafbf9;
+}
+
+.ash-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ash-order-code,
+.ash-tracking-number {
+  display: inline-block;
+  max-width: 190px;
+  overflow: hidden;
+  color: var(--ash-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.ash-customer {
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+}
+
+.ash-customer strong {
+  color: var(--ash-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ash-customer small {
+  color: var(--ash-muted);
+  font-size: 10px;
+}
+
+.ash-shipping-fee {
+  color: var(--ash-ink);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ash-view-button {
+  padding: 6px 11px;
+  border: 1px solid #e1e3df;
+  border-radius: 4px;
+  background: #fff;
+  color: #7c858a;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+/* ---------- Shipment status badges ---------- */
+.ash-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 180px;
+  padding: 5px 9px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #eef0ef;
+  color: #55616a;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ash-status-awaiting-dispatch,
+.ash-status-ready-for-pickup {
+  background: #fff3d6;
+  color: #8a5a00;
+}
+
+.ash-status-in-transit {
+  background: #e3effd;
+  color: #1f5fa8;
+}
+
+.ash-status-out-for-delivery {
+  background: #ebe8fa;
+  color: #4a40a6;
+}
+
+.ash-status-delivered {
+  background: #e0f3e8;
+  color: #1f7a48;
+}
+
+.ash-status-delivery-failed,
+.ash-status-returned,
+.ash-status-cancelled {
+  background: #fbe4e2;
+  color: #a8322a;
+}
+
+/* ---------- Empty state ---------- */
+.admin-shipments .ash-empty-state {
+  min-height: 270px;
+  padding: 38px 20px;
+}
+
+.ash-empty-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  place-items: center;
+  border: 1px solid var(--ash-line);
+  border-radius: 50%;
+  color: #8b969b;
+}
+
+.ash-empty-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.admin-shipments .ap-state strong {
+  color: var(--ash-ink);
+  font-size: 13px;
+}
+
+.admin-shipments .ap-state p {
+  max-width: 430px;
+  margin: 0;
+  color: var(--ash-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.ash-empty-hint {
+  margin-top: 7px;
+  color: #a0a5a7;
+  font-size: 9px;
+}
+
+/* ---------- Workflow panel ---------- */
+.ash-workflow-panel {
+  margin-top: 18px;
+  padding: 19px 20px;
+  border: 1px solid var(--ash-line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.ash-workflow-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--ash-line);
+}
+
+.ash-workflow-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.ash-workflow-heading strong {
+  color: var(--ash-ink);
+  font-size: 11px;
+}
+
+.ash-workflow-heading p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--ash-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.ash-workflow-heading > span {
+  flex-shrink: 0;
+  color: #9a8551;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.ash-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 17px;
+}
+
+.ash-workflow-grid article {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+}
+
+.ash-workflow-number {
+  display: grid;
+  flex-shrink: 0;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid var(--ash-line);
+  border-radius: 50%;
+  color: #7e898e;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.ash-workflow-grid article > div {
+  display: grid;
+  gap: 5px;
+}
+
+.ash-workflow-grid article strong {
+  color: var(--ash-ink);
+  font-size: 10px;
+}
+
+.ash-workflow-grid article p {
+  margin: 0;
+  color: var(--ash-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+/* ---------- Pagination ---------- */
+.admin-shipments .ap-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 0 20px;
+  border-top: 1px solid var(--ash-line);
+  color: var(--ash-muted);
+  font-size: 10px;
+}
+
+.admin-shipments .ap-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-shipments .ap-pagination button {
+  padding: 6px 12px;
+  border: 1px solid #e1e3df;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ash-ink);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.admin-shipments .ap-pagination button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1023px) {
+  .admin-shipments .ash-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-shipments .ash-toolbar {
+    align-items: stretch;
+  }
+
+  .admin-shipments .ap-search {
+    flex-basis: 100%;
+  }
+
+  .admin-shipments .ap-filter {
+    flex: 1 1 150px;
+  }
+
+  .ash-clear-button {
+    align-self: flex-end;
+  }
+
+  .ash-workflow-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-shipments .admin-products-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-shipments .ash-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 15px;
+  }
+
+  .admin-shipments .ap-search,
+  .ash-clear-button {
+    grid-column: 1 / -1;
+  }
+
+  .admin-shipments .ap-filter {
+    min-width: 0;
+  }
+
+  .ash-workflow-heading {
+    flex-direction: column;
+  }
+
+  .ash-workflow-heading > span {
+    align-self: flex-start;
+  }
+
+  .ash-workflow-panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-shipments .ash-summary-grid {
+    gap: 9px;
+  }
+
+  .ash-summary-card {
+    min-height: 100px;
+    padding: 12px;
+  }
+
+  .ash-summary-card > strong {
+    margin-top: 9px;
+    font-size: 21px;
+  }
+
+  .ash-secondary-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-shipments .ap-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .admin-shipments .ap-pagination > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

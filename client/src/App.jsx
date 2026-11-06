@@ -33,6 +33,7 @@ import AdminProducts from "./pages/Admin/AdminProducts.jsx";
 import AdminInventory from "./pages/Admin/AdminInventory.jsx";
 import AdminOrders from "./pages/Admin/AdminOrders.jsx";
 import AdminPayments from "./pages/Admin/AdminPayments.jsx";
+import AdminShipments from "./pages/Admin/AdminShipments.jsx";
 
 const Checkout = lazy(() => import("./pages/Checkout/Checkout.jsx"));
 const Account = lazy(() => import("./pages/Account/Account.jsx"));
@@ -131,15 +132,7 @@ function AppRoutes() {
 
             <Route path="payments" element={<AdminPayments />} />
 
-            <Route
-              path="shipments"
-              element={
-                <AdminModule
-                  title="Shipments"
-                  description="Manage delivery and tracking information."
-                />
-              }
-            />
+            <Route path="shipments" element={<AdminShipments />} />
 
             <Route
               path="sellers"
