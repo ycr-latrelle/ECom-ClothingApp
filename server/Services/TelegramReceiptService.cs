@@ -84,6 +84,70 @@ public sealed class TelegramReceiptService
             largestPhoto.FileId);
     }
 
+    public async Task<TelegramReceiptImage?> GetReceiptImageAsync(
+        string fileId,
+        string? expectedContentType = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId))
+            return null;
+
+        var (botToken, _) = GetTelegramSettings();
+
+        // Ask Telegram for the file's temporary download path.
+        using var getFileResponse = await _httpClient.GetAsync(
+            $"https://api.telegram.org/bot{botToken}/getFile" +
+            $"?file_id={Uri.EscapeDataString(fileId)}",
+            cancellationToken);
+
+        var getFileResult = await ReadResponseAsync(
+            getFileResponse,
+            cancellationToken);
+
+        if (!getFileResponse.IsSuccessStatusCode ||
+            getFileResult?.Ok != true ||
+            getFileResult.Result.ValueKind != JsonValueKind.Object ||
+            !getFileResult.Result.TryGetProperty(
+                "file_path",
+                out var filePathElement))
+        {
+            throw new HttpRequestException(
+                "Unable to retrieve the payment receipt from Telegram.");
+        }
+
+        var filePath = filePathElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new HttpRequestException(
+                "Telegram returned an invalid receipt file path.");
+        }
+
+        // Download the receipt using the bot token on the server only.
+        using var fileResponse = await _httpClient.GetAsync(
+            $"https://api.telegram.org/file/bot{botToken}/{filePath}",
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (!fileResponse.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                "Unable to download the payment receipt from Telegram.");
+        }
+
+        var content = await fileResponse.Content.ReadAsByteArrayAsync(
+            cancellationToken);
+
+        var contentType =
+            fileResponse.Content.Headers.ContentType?.MediaType ??
+            expectedContentType ??
+            "application/octet-stream";
+
+        return new TelegramReceiptImage(
+            content,
+            contentType);
+    }
+
     public async Task<bool> DeleteReceiptMessageAsync(
         TelegramReceiptReference receipt,
         CancellationToken cancellationToken = default)
@@ -189,3 +253,7 @@ public sealed record TelegramReceiptReference(
     string ChatId,
     long MessageId,
     string FileId);
+
+public sealed record TelegramReceiptImage(
+    byte[] Content,
+    string ContentType);

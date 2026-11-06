@@ -237,6 +237,7 @@ builder.Services.AddScoped<OrderReadRepository>();
 builder.Services.AddScoped<AdminOrderReadRepository>();
 builder.Services.AddScoped<InventoryRepository>();
 builder.Services.AddScoped<AdminShipmentRepository>();
+builder.Services.AddScoped<AdminPaymentRepository>();
 
 
 // --------------------------------------------------

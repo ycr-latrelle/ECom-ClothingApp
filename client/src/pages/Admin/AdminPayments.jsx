@@ -1,11 +1,18 @@
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/useAuth.js';
+import {
+  fetchAdminPayments,
+  fetchAdminPaymentReceipt,
+  verifyAdminPayment,
+  rejectAdminPayment,
+  AdminPaymentsApiError,
+} from '../../api/adminPaymentApi.js';
 import './AdminPayments.css';
 
 const PAGE_SIZE = 8;
 
 const PAYMENT_STATUSES = [
-  'awaiting_submission',
   'pending_verification',
   'verified',
   'rejected',
@@ -24,6 +31,19 @@ const money = (value) =>
     currency: 'PHP',
     maximumFractionDigits: 2,
   }).format(Number(value) || 0);
+
+const dateTime = (value) => {
+  if (!value) return '—';
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(date);
+};
 
 const label = (value) =>
   String(value || 'Unknown')
@@ -54,15 +74,74 @@ function SummaryCard({ title, value, description }) {
 }
 
 export default function AdminPayments() {
+  const { user } = useAuth();
+
+  const [payments, setPayments] = useState([]);
+  const [loadStatus, setLoadStatus] = useState('loading');
+  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+
   const [search, setSearch] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('all');
   const [paymentMethod, setPaymentMethod] = useState('all');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
 
-  // Payment records will be supplied by the protected admin API
-  // in a later implementation stage. No sample records are used here.
-  const payments = [];
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [receiptUrl, setReceiptUrl] = useState('');
+  const [receiptStatus, setReceiptStatus] = useState('idle');
+  const [receiptError, setReceiptError] = useState('');
+
+  const [actionStatus, setActionStatus] = useState('idle');
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const reload = useCallback(() => {
+    setReloadKey((value) => value + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setLoadStatus('error');
+      setError('You must be signed in to view administrative payments.');
+      return undefined;
+    }
+
+    let active = true;
+
+    setLoadStatus('loading');
+    setError('');
+
+    fetchAdminPayments(user)
+      .then((data) => {
+        if (!active) return;
+
+        setPayments(data);
+        setLoadStatus('ready');
+      })
+      .catch((requestError) => {
+        if (!active) return;
+
+        setPayments([]);
+        setLoadStatus('error');
+        setError(
+          requestError.message || 'Could not load payment submissions.',
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, reloadKey]);
+
+  useEffect(() => {
+    return () => {
+      if (receiptUrl) {
+        URL.revokeObjectURL(receiptUrl);
+      }
+    };
+  }, [receiptUrl]);
 
   const summary = useMemo(() => ({
     total: payments.length,
@@ -87,6 +166,7 @@ export default function AdminPayments() {
         payment.customerEmail,
         payment.referenceNumber,
         payment.senderName,
+        payment.sourceProvider,
       ].some((value) =>
         String(value || '').toLowerCase().includes(query),
       );
@@ -134,6 +214,107 @@ export default function AdminPayments() {
     setPage(1);
   }
 
+  function closeDetails() {
+    setSelectedPayment(null);
+    setRejectMode(false);
+    setRejectionReason('');
+    setActionError('');
+    setActionStatus('idle');
+    setReceiptStatus('idle');
+    setReceiptError('');
+    setReceiptUrl((currentUrl) => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      return '';
+    });
+  }
+
+  async function openDetails(payment) {
+    closeDetails();
+    setSelectedPayment(payment);
+
+    if (!payment.hasReceipt) {
+      setReceiptStatus('missing');
+      return;
+    }
+
+    setReceiptStatus('loading');
+
+    try {
+      const blob = await fetchAdminPaymentReceipt(user, payment.id);
+
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('The receipt response is not a supported image.');
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+
+      setReceiptUrl(objectUrl);
+      setReceiptStatus('ready');
+    } catch (requestError) {
+      setReceiptStatus('error');
+      setReceiptError(
+        requestError.message || 'Unable to load the receipt image.',
+      );
+    }
+  }
+
+  async function handleVerify() {
+    if (!selectedPayment || actionStatus === 'loading') return;
+
+    const confirmed = window.confirm(
+      `Verify the payment for order ${selectedPayment.orderCode}?`,
+    );
+
+    if (!confirmed) return;
+
+    setActionStatus('loading');
+    setActionError('');
+
+    try {
+      await verifyAdminPayment(user, selectedPayment.id);
+
+      closeDetails();
+      reload();
+    } catch (requestError) {
+      setActionStatus('error');
+      setActionError(
+        requestError.message || 'Unable to verify this payment.',
+      );
+    }
+  }
+
+  async function handleReject(event) {
+    event.preventDefault();
+
+    if (!selectedPayment || actionStatus === 'loading') return;
+
+    const reason = rejectionReason.trim();
+
+    if (!reason) {
+      setActionError('Please provide a rejection reason.');
+      return;
+    }
+
+    setActionStatus('loading');
+    setActionError('');
+
+    try {
+      await rejectAdminPayment(
+        user,
+        selectedPayment.id,
+        reason,
+      );
+
+      closeDetails();
+      reload();
+    } catch (requestError) {
+      setActionStatus('error');
+      setActionError(
+        requestError.message || 'Unable to reject this payment.',
+      );
+    }
+  }
+
   return (
     <section className="admin-payments">
       <header className="admin-products-heading">
@@ -148,52 +329,60 @@ export default function AdminPayments() {
         <button
           type="button"
           className="ap-secondary-button"
-          disabled
-          title="Available after backend integration"
+          onClick={reload}
+          disabled={loadStatus === 'loading'}
         >
-          Refresh payments
+          ↻ Refresh payments
         </button>
       </header>
 
-      <div className="apm-preview-notice">
-        <span className="apm-notice-icon">i</span>
-        <p>
-          <strong>Payment API not connected yet.</strong>{' '}
-          This screen is currently a frontend preview. Actual payment
-          submissions, receipt images, and verification actions will
-          become available after backend integration.
-        </p>
-      </div>
+      {loadStatus === 'error' && (
+        <div className="apm-preview-notice apm-error-notice" role="alert">
+          <span className="apm-notice-icon">!</span>
+          <p>
+            <strong>Payments could not be loaded.</strong>{' '}
+            {error}
+            {' '}
+            <button type="button" onClick={reload}>Try again</button>
+          </p>
+        </div>
+      )}
 
       <div className="ap-summary-grid">
         <SummaryCard
           title="Total submissions"
-          value="—"
+          value={loadStatus === 'ready' ? summary.total : '—'}
           description="All recorded payment submissions"
         />
         <SummaryCard
           title="Pending verification"
-          value="—"
+          value={loadStatus === 'ready' ? summary.pending : '—'}
           description="Waiting for administrator review"
         />
         <SummaryCard
           title="Verified"
-          value="—"
+          value={loadStatus === 'ready' ? summary.verified : '—'}
           description="Successfully verified submissions"
         />
         <SummaryCard
           title="Rejected"
-          value="—"
+          value={loadStatus === 'ready' ? summary.rejected : '—'}
           description="Rejected payment submissions"
         />
       </div>
 
       <div className="apm-secondary-summary">
         <span>
-          Payment records will appear here after API integration.
+          {loadStatus === 'ready'
+            ? `${summary.pending} payment submissions require review.`
+            : 'Payment submission information'}
         </span>
         <span>
-          <strong>Verification actions disabled</strong>
+          <strong>
+            {loadStatus === 'ready'
+              ? 'Live administrative records'
+              : 'Waiting for API'}
+          </strong>
         </span>
       </div>
 
@@ -201,13 +390,11 @@ export default function AdminPayments() {
         <div className="ap-catalog-header">
           <div>
             <h2>Payment submissions</h2>
-            <p>
-              Search and review customer payment records.
-            </p>
+            <p>Search, filter, and review customer payment records.</p>
           </div>
 
           <span className="ap-result-count">
-            {filteredPayments.length} submissions
+            {loadStatus === 'ready' ? filteredPayments.length : '—'} submissions
           </span>
         </div>
 
@@ -222,6 +409,7 @@ export default function AdminPayments() {
               }
               placeholder="Search order, customer, or reference..."
               aria-label="Search payment submissions"
+              disabled={loadStatus !== 'ready'}
             />
           </label>
 
@@ -232,6 +420,7 @@ export default function AdminPayments() {
               onChange={(event) =>
                 updateFilter(setPaymentStatus, event.target.value)
               }
+              disabled={loadStatus !== 'ready'}
             >
               <option value="all">All statuses</option>
               {PAYMENT_STATUSES.map((item) => (
@@ -249,6 +438,7 @@ export default function AdminPayments() {
               onChange={(event) =>
                 updateFilter(setPaymentMethod, event.target.value)
               }
+              disabled={loadStatus !== 'ready'}
             >
               {PAYMENT_METHODS.map((item) => (
                 <option key={item} value={item}>
@@ -265,6 +455,7 @@ export default function AdminPayments() {
               onChange={(event) =>
                 updateFilter(setSort, event.target.value)
               }
+              disabled={loadStatus !== 'ready'}
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
@@ -275,22 +466,30 @@ export default function AdminPayments() {
             type="button"
             className="apm-clear-button"
             onClick={clearFilters}
+            disabled={loadStatus !== 'ready'}
           >
             Clear filters
           </button>
         </div>
 
-        {payments.length === 0 ? (
+        {loadStatus === 'loading' ? (
+          <div className="ap-state" role="status">
+            <span className="ap-loader" />
+            <p>Loading payment submissions...</p>
+          </div>
+        ) : loadStatus === 'error' ? (
+          <div className="ap-state ap-state-error">
+            <strong>Unable to display payments</strong>
+            <p>{error}</p>
+          </div>
+        ) : payments.length === 0 ? (
           <div className="ap-state apm-empty-state">
             <span className="apm-empty-icon">₱</span>
             <strong>No payment records available</strong>
             <p>
-              Payment submissions will appear here once the
-              protected admin payments API is connected.
+              Customer payment submissions will appear here once
+              they are recorded.
             </p>
-            <span className="apm-empty-hint">
-              No sample or placeholder transactions are being displayed.
-            </span>
           </div>
         ) : filteredPayments.length === 0 ? (
           <div className="ap-state">
@@ -338,7 +537,14 @@ export default function AdminPayments() {
                           <small>{payment.customerEmail || '—'}</small>
                         </div>
                       </td>
-                      <td>{label(payment.paymentMethod)}</td>
+                      <td>
+                        <div className="apm-method-cell">
+                          <strong>{label(payment.paymentMethod)}</strong>
+                          {payment.sourceProvider && (
+                            <small>{label(payment.sourceProvider)}</small>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         <span className="apm-reference">
                           {payment.referenceNumber || '—'}
@@ -349,7 +555,7 @@ export default function AdminPayments() {
                           {money(payment.amount)}
                         </strong>
                       </td>
-                      <td>{payment.submittedAt || '—'}</td>
+                      <td>{dateTime(payment.submittedAt)}</td>
                       <td>
                         <PaymentStatusBadge value={payment.status} />
                       </td>
@@ -357,7 +563,7 @@ export default function AdminPayments() {
                         <button
                           type="button"
                           className="apm-view-button"
-                          disabled
+                          onClick={() => openDetails(payment)}
                         >
                           View details
                         </button>
@@ -370,8 +576,11 @@ export default function AdminPayments() {
 
             <div className="ap-pagination">
               <span>
-                Showing {pagePayments.length} of {filteredPayments.length} submissions
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, filteredPayments.length)} of{' '}
+                {filteredPayments.length} submissions
               </span>
+
               <div>
                 <button
                   type="button"
@@ -396,17 +605,297 @@ export default function AdminPayments() {
         )}
       </section>
 
-      <section className="apm-workflow-note">
-        <div>
-          <strong>Payment review workflow</strong>
-          <p>
-            The planned workflow will let administrators inspect
-            submitted receipts, verify payment details, or reject
-            submissions with an explanation.
-          </p>
-        </div>
-        <span>Backend integration pending</span>
-      </section>
+      {selectedPayment && (
+        <PaymentDetails
+          payment={selectedPayment}
+          receiptUrl={receiptUrl}
+          receiptStatus={receiptStatus}
+          receiptError={receiptError}
+          actionStatus={actionStatus}
+          actionError={actionError}
+          rejectMode={rejectMode}
+          rejectionReason={rejectionReason}
+          onRejectionReasonChange={setRejectionReason}
+          onVerify={handleVerify}
+          onReject={handleReject}
+          onStartReject={() => {
+            setRejectMode(true);
+            setActionError('');
+          }}
+          onCancelReject={() => {
+            setRejectMode(false);
+            setRejectionReason('');
+            setActionError('');
+          }}
+          onClose={closeDetails}
+        />
+      )}
     </section>
+  );
+}
+
+function DetailRow({ title, children }) {
+  return (
+    <div className="apm-detail-row">
+      <span>{title}</span>
+      <strong>{children ?? '—'}</strong>
+    </div>
+  );
+}
+
+function PaymentDetails({
+  payment,
+  receiptUrl,
+  receiptStatus,
+  receiptError,
+  actionStatus,
+  actionError,
+  rejectMode,
+  rejectionReason,
+  onRejectionReasonChange,
+  onVerify,
+  onReject,
+  onStartReject,
+  onCancelReject,
+  onClose,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && actionStatus !== 'loading') {
+        onClose();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, actionStatus]);
+
+  const isPending = payment.status === 'pending_verification';
+
+  return (
+    <div
+      className="apm-modal-backdrop"
+      onMouseDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          actionStatus !== 'loading'
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="apm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="apm-detail-title"
+      >
+        <header className="apm-modal-header">
+          <div>
+            <p className="eyebrow">PAYMENT REVIEW</p>
+            <h2 id="apm-detail-title">
+              {payment.orderCode || 'Payment details'}
+            </h2>
+            <p>Submitted {dateTime(payment.submittedAt)}</p>
+          </div>
+
+          <button
+            type="button"
+            className="apm-modal-close"
+            onClick={onClose}
+            disabled={actionStatus === 'loading'}
+            aria-label="Close payment details"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="apm-modal-content">
+          <section className="apm-detail-section">
+            <div className="apm-detail-status">
+              <span>Verification status</span>
+              <PaymentStatusBadge value={payment.status} />
+            </div>
+            <DetailRow title="Payment purpose">
+              {label(payment.paymentPurpose)}
+            </DetailRow>
+            <DetailRow title="Amount">{money(payment.amount)}</DetailRow>
+            <DetailRow title="Payment method">
+              {label(payment.paymentMethod)}
+            </DetailRow>
+            <DetailRow title="Payment provider">
+              {payment.sourceProvider
+                ? label(payment.sourceProvider)
+                : '—'}
+            </DetailRow>
+            <DetailRow title="Destination account">
+              {payment.destinationId}
+            </DetailRow>
+          </section>
+
+          <section className="apm-detail-section">
+            <h3>Customer payment information</h3>
+            <DetailRow title="Customer">{payment.customerName}</DetailRow>
+            <DetailRow title="Email">{payment.customerEmail}</DetailRow>
+            <DetailRow title="Sender name">{payment.senderName}</DetailRow>
+            <DetailRow title="Reference number">
+              {payment.referenceNumber}
+            </DetailRow>
+          </section>
+
+          <section className="apm-detail-section">
+            <h3>Submitted receipt</h3>
+
+            {receiptStatus === 'loading' ? (
+              <div className="apm-receipt-state">
+                <span className="ap-loader" />
+                <p>Loading receipt image...</p>
+              </div>
+            ) : receiptStatus === 'ready' && receiptUrl ? (
+              <a
+                className="apm-receipt-link"
+                href={receiptUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <img
+                  className="apm-receipt-image"
+                  src={receiptUrl}
+                  alt={`Payment receipt for ${payment.orderCode}`}
+                />
+                <span>Open full-size receipt</span>
+              </a>
+            ) : receiptStatus === 'missing' ? (
+              <p className="apm-receipt-message">
+                No receipt image is attached to this submission.
+              </p>
+            ) : (
+              <p className="apm-receipt-error">
+                {receiptError || 'Unable to load the receipt.'}
+              </p>
+            )}
+
+            <DetailRow title="Receipt validation">
+              {label(payment.receiptValidationStatus)}
+            </DetailRow>
+            <DetailRow title="Receipt file size">
+              {payment.receiptSizeBytes == null
+                ? '—'
+                : `${(payment.receiptSizeBytes / 1024).toFixed(1)} KB`}
+            </DetailRow>
+          </section>
+
+          {(payment.status === 'rejected' || payment.adminNote) && (
+            <section className="apm-detail-section">
+              <h3>Administrator note</h3>
+              <p className="apm-admin-note">
+                {payment.adminNote || 'No administrator note.'}
+              </p>
+            </section>
+          )}
+
+          {payment.verifiedAt && (
+            <section className="apm-detail-section">
+              <h3>Verification information</h3>
+              <DetailRow title="Verified at">
+                {dateTime(payment.verifiedAt)}
+              </DetailRow>
+              <DetailRow title="Verified by">
+                {payment.verifiedBy}
+              </DetailRow>
+            </section>
+          )}
+
+          {actionError && (
+            <div className="apm-action-error" role="alert">
+              {actionError}
+            </div>
+          )}
+
+          {rejectMode && (
+            <form className="apm-rejection-form" onSubmit={onReject}>
+              <label htmlFor="apm-rejection-reason">
+                Rejection reason
+              </label>
+              <textarea
+                id="apm-rejection-reason"
+                value={rejectionReason}
+                onChange={(event) =>
+                  onRejectionReasonChange(event.target.value)
+                }
+                placeholder="Explain why this payment submission is being rejected..."
+                rows={4}
+                maxLength={1000}
+                required
+                disabled={actionStatus === 'loading'}
+              />
+              <small>
+                The customer will be able to submit a corrected receipt.
+              </small>
+
+              <div className="apm-modal-actions">
+                <button
+                  type="button"
+                  className="apm-cancel-button"
+                  onClick={onCancelReject}
+                  disabled={actionStatus === 'loading'}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="apm-reject-button"
+                  disabled={
+                    actionStatus === 'loading' ||
+                    !rejectionReason.trim()
+                  }
+                >
+                  {actionStatus === 'loading'
+                    ? 'Processing...'
+                    : 'Confirm rejection'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        {!rejectMode && (
+          <footer className="apm-modal-footer">
+            <button
+              type="button"
+              className="apm-cancel-button"
+              onClick={onClose}
+              disabled={actionStatus === 'loading'}
+            >
+              Close
+            </button>
+
+            {isPending && (
+              <>
+                <button
+                  type="button"
+                  className="apm-reject-button"
+                  onClick={onStartReject}
+                  disabled={actionStatus === 'loading'}
+                >
+                  Reject payment
+                </button>
+                <button
+                  type="button"
+                  className="apm-verify-button"
+                  onClick={onVerify}
+                  disabled={actionStatus === 'loading'}
+                >
+                  {actionStatus === 'loading'
+                    ? 'Processing...'
+                    : 'Verify payment'}
+                </button>
+              </>
+            )}
+          </footer>
+        )}
+      </section>
+    </div>
   );
 }
