@@ -236,6 +236,7 @@ builder.Services.AddScoped<ReceiptAnalysisService>();
 builder.Services.AddScoped<OrderReadRepository>();
 builder.Services.AddScoped<AdminOrderReadRepository>();
 builder.Services.AddScoped<InventoryRepository>();
+builder.Services.AddScoped<AdminShipmentRepository>();
 
 
 // --------------------------------------------------
