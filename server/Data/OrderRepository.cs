@@ -1,3 +1,4 @@
+
 using Npgsql;
 using NpgsqlTypes;
 using server.Api.Models;
@@ -27,12 +28,14 @@ public sealed class OrderRepository
     {
         if (request.Items is null || request.Items.Count == 0)
         {
-            throw new OrderValidationException("Add at least one item to the order.");
+            throw new OrderValidationException(
+                "Add at least one item to the order.");
         }
 
         if (request.Items.Count > 20)
         {
-            throw new OrderValidationException("An order can contain at most 20 cart lines.");
+            throw new OrderValidationException(
+                "An order can contain at most 20 cart lines.");
         }
 
         var submittedLines = new List<RequestedLine>();
@@ -41,12 +44,14 @@ public sealed class OrderRepository
         {
             if (item.ProductId is null || item.ProductId == Guid.Empty)
             {
-                throw new OrderValidationException("A product ID is invalid.");
+                throw new OrderValidationException(
+                    "A product ID is invalid.");
             }
 
             if (item.Quantity is < 1 or > 10)
             {
-                throw new OrderValidationException("Each item quantity must be between 1 and 10.");
+                throw new OrderValidationException(
+                    "Each item quantity must be between 1 and 10.");
             }
 
             var size = string.IsNullOrWhiteSpace(item.Size)
@@ -89,6 +94,10 @@ public sealed class OrderRepository
         await using var transaction =
             await connection.BeginTransactionAsync(cancellationToken);
 
+        // --------------------------------------------------
+        // LOAD AND VALIDATE PRODUCTS
+        // --------------------------------------------------
+
         const string getProductsSql = """
             SELECT id, slug, name, price, status, sizes
             FROM app_private.products
@@ -99,9 +108,14 @@ public sealed class OrderRepository
         var products = new Dictionary<Guid, ProductRow>();
 
         await using (var productCommand =
-                     new NpgsqlCommand(getProductsSql, connection, transaction))
+                     new NpgsqlCommand(
+                         getProductsSql,
+                         connection,
+                         transaction))
         {
-            productCommand.Parameters.AddWithValue("product_ids", productIds);
+            productCommand.Parameters.AddWithValue(
+                "product_ids",
+                productIds);
 
             await using var reader =
                 await productCommand.ExecuteReaderAsync(cancellationToken);
@@ -126,7 +140,12 @@ public sealed class OrderRepository
                 "One or more products are unavailable. Refresh the cart and try again.");
         }
 
+        // --------------------------------------------------
+        // VALIDATE SIZES AND CALCULATE TOTALS
+        // --------------------------------------------------
+
         var pricedLines = new List<PricedLine>();
+
         decimal readySubtotal = 0;
         decimal preorderSubtotal = 0;
 
@@ -142,7 +161,9 @@ public sealed class OrderRepository
 
             if (product.Sizes.Length > 0 &&
                 (line.Size is null ||
-                 !product.Sizes.Contains(line.Size, StringComparer.OrdinalIgnoreCase)))
+                 !product.Sizes.Contains(
+                     line.Size,
+                     StringComparer.OrdinalIgnoreCase)))
             {
                 throw new OrderValidationException(
                     $"Choose a valid size for {product.Name}.");
@@ -174,6 +195,10 @@ public sealed class OrderRepository
         var dueToday = readySubtotal + depositAmount;
         var balanceLater = preorderSubtotal - depositAmount;
 
+        // --------------------------------------------------
+        // CREATE ORDER
+        // --------------------------------------------------
+
         var orderId = Guid.NewGuid();
         var orderCode = $"ORD-{orderId:N}".ToUpperInvariant();
         var createdAt = DateTimeOffset.UtcNow;
@@ -202,59 +227,110 @@ public sealed class OrderRepository
             """;
 
         await using (var orderCommand =
-                     new NpgsqlCommand(insertOrderSql, connection, transaction))
+                     new NpgsqlCommand(
+                         insertOrderSql,
+                         connection,
+                         transaction))
         {
             orderCommand.Parameters.AddWithValue("id", orderId);
             orderCommand.Parameters.AddWithValue("order_code", orderCode);
             orderCommand.Parameters.AddWithValue("firebase_uid", firebaseUid);
-            orderCommand.Parameters.AddWithValue(
-                "customer_full_name", request.CustomerFullName.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "customer_email", request.CustomerEmail.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "mobile_number", request.MobileNumber.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "street_address", request.StreetAddress.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "barangay", request.Barangay.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "city_municipality", request.CityMunicipality.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "province", request.Province.Trim());
-            orderCommand.Parameters.AddWithValue(
-                "postal_code", request.PostalCode.Trim());
 
-            orderCommand.Parameters.Add("delivery_notes", NpgsqlDbType.Text).Value =
+            orderCommand.Parameters.AddWithValue(
+                "customer_full_name",
+                request.CustomerFullName.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "customer_email",
+                request.CustomerEmail.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "mobile_number",
+                request.MobileNumber.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "street_address",
+                request.StreetAddress.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "barangay",
+                request.Barangay.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "city_municipality",
+                request.CityMunicipality.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "province",
+                request.Province.Trim());
+
+            orderCommand.Parameters.AddWithValue(
+                "postal_code",
+                request.PostalCode.Trim());
+
+            orderCommand.Parameters.Add(
+                "delivery_notes",
+                NpgsqlDbType.Text).Value =
                 string.IsNullOrWhiteSpace(request.DeliveryNotes)
                     ? DBNull.Value
                     : request.DeliveryNotes.Trim();
 
             orderCommand.Parameters.AddWithValue(
-                "delivery_latitude", request.DeliveryLatitude!.Value);
+                "delivery_latitude",
+                request.DeliveryLatitude!.Value);
+
             orderCommand.Parameters.AddWithValue(
-                "delivery_longitude", request.DeliveryLongitude!.Value);
+                "delivery_longitude",
+                request.DeliveryLongitude!.Value);
 
             var accuracyValue = request.DeliveryAccuracyMeters.HasValue
-                ? (object)Convert.ToDecimal(request.DeliveryAccuracyMeters.Value)
+                ? (object)Convert.ToDecimal(
+                    request.DeliveryAccuracyMeters.Value)
                 : DBNull.Value;
 
             orderCommand.Parameters.Add(
-                "delivery_accuracy_meters", NpgsqlDbType.Numeric).Value = accuracyValue;
+                "delivery_accuracy_meters",
+                NpgsqlDbType.Numeric).Value = accuracyValue;
 
-            orderCommand.Parameters.AddWithValue("ready_subtotal", readySubtotal);
-            orderCommand.Parameters.AddWithValue("preorder_subtotal", preorderSubtotal);
             orderCommand.Parameters.AddWithValue(
-                "deposit_percent", PreorderDepositPercent);
-            orderCommand.Parameters.AddWithValue("deposit_amount", depositAmount);
-            orderCommand.Parameters.AddWithValue("due_today", dueToday);
-            orderCommand.Parameters.AddWithValue("balance_later", balanceLater);
-            orderCommand.Parameters.AddWithValue("created_at", createdAt);
-            orderCommand.Parameters.AddWithValue("is_test", _isTest);
+                "ready_subtotal",
+                readySubtotal);
+
+            orderCommand.Parameters.AddWithValue(
+                "preorder_subtotal",
+                preorderSubtotal);
+
+            orderCommand.Parameters.AddWithValue(
+                "deposit_percent",
+                PreorderDepositPercent);
+
+            orderCommand.Parameters.AddWithValue(
+                "deposit_amount",
+                depositAmount);
+
+            orderCommand.Parameters.AddWithValue(
+                "due_today",
+                dueToday);
+
+            orderCommand.Parameters.AddWithValue(
+                "balance_later",
+                balanceLater);
+
+            orderCommand.Parameters.AddWithValue(
+                "created_at",
+                createdAt);
+
+            orderCommand.Parameters.AddWithValue(
+                "is_test",
+                _isTest);
 
             await orderCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        // Record the initial order status in the same transaction.
+        // --------------------------------------------------
+        // RECORD INITIAL ORDER STATUS
+        // --------------------------------------------------
+
         const string insertInitialStatusSql = """
             INSERT INTO app_private.order_status_history (
                 order_id,
@@ -275,55 +351,307 @@ public sealed class OrderRepository
             """;
 
         await using (var statusCommand =
-                     new NpgsqlCommand(insertInitialStatusSql, connection, transaction))
+                     new NpgsqlCommand(
+                         insertInitialStatusSql,
+                         connection,
+                         transaction))
         {
-            statusCommand.Parameters.AddWithValue("order_id", orderId);
-            statusCommand.Parameters.AddWithValue("created_at", createdAt);
+            statusCommand.Parameters.AddWithValue(
+                "order_id",
+                orderId);
+
+            statusCommand.Parameters.AddWithValue(
+                "created_at",
+                createdAt);
 
             await statusCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        // --------------------------------------------------
+        // INSERT ORDER ITEMS AND RESERVE READY STOCK
+        // --------------------------------------------------
+
+        // A consistent lock order reduces the risk of deadlocks
+        // when two customers order overlapping product variants.
+        var orderedLines = pricedLines
+            .OrderBy(line => line.Product.Id)
+            .ThenBy(
+                line => line.Size ?? string.Empty,
+                StringComparer.Ordinal)
+            .ToList();
+
         const string insertItemSql = """
             INSERT INTO app_private.order_items (
-                order_id, product_id, product_slug_snapshot,
-                product_name_snapshot, fulfillment_status_snapshot,
-                unit_price, quantity, size, line_total
+                order_id,
+                product_id,
+                product_slug_snapshot,
+                product_name_snapshot,
+                fulfillment_status_snapshot,
+                unit_price,
+                quantity,
+                size,
+                line_total
             )
             VALUES (
-                @order_id, @product_id, @product_slug_snapshot,
-                @product_name_snapshot, @fulfillment_status_snapshot,
-                @unit_price, @quantity, @size, @line_total
+                @order_id,
+                @product_id,
+                @product_slug_snapshot,
+                @product_name_snapshot,
+                @fulfillment_status_snapshot,
+                @unit_price,
+                @quantity,
+                @size,
+                @line_total
+            )
+            RETURNING id;
+            """;
+
+        const string reserveStockSql = """
+            UPDATE app_private.product_inventory
+            SET
+                reserved_quantity = reserved_quantity + @quantity,
+                updated_at = @created_at
+            WHERE product_id = @product_id
+              AND size IS NOT DISTINCT FROM @size
+              AND on_hand_quantity - reserved_quantity >= @quantity
+            RETURNING id;
+            """;
+
+        const string insertReservationSql = """
+            INSERT INTO app_private.inventory_reservations (
+                inventory_id,
+                order_id,
+                order_item_id,
+                quantity,
+                status,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                @inventory_id,
+                @order_id,
+                @order_item_id,
+                @quantity,
+                'active',
+                @created_at,
+                @created_at
+            )
+            RETURNING id;
+            """;
+
+        const string insertMovementSql = """
+            INSERT INTO app_private.inventory_movements (
+                inventory_id,
+                product_id,
+                reservation_id,
+                order_id,
+                order_item_id,
+                movement_type,
+                on_hand_delta,
+                reserved_delta,
+                note,
+                changed_by,
+                created_at
+            )
+            VALUES (
+                @inventory_id,
+                @product_id,
+                @reservation_id,
+                @order_id,
+                @order_item_id,
+                'order_reserved',
+                0,
+                @reserved_delta,
+                @note,
+                'system',
+                @created_at
             );
             """;
 
-        await using (var itemCommand =
-                     new NpgsqlCommand(insertItemSql, connection, transaction))
+        foreach (var line in orderedLines)
         {
-            foreach (var line in pricedLines)
+            // First create the order item so the reservation
+            // can reference its actual database ID.
+            Guid orderItemId;
+
+            await using (var itemCommand =
+                         new NpgsqlCommand(
+                             insertItemSql,
+                             connection,
+                             transaction))
             {
-                itemCommand.Parameters.Clear();
+                itemCommand.Parameters.AddWithValue(
+                    "order_id",
+                    orderId);
 
-                itemCommand.Parameters.AddWithValue("order_id", orderId);
-                itemCommand.Parameters.AddWithValue("product_id", line.Product.Id);
                 itemCommand.Parameters.AddWithValue(
-                    "product_slug_snapshot", line.Product.Slug);
-                itemCommand.Parameters.AddWithValue(
-                    "product_name_snapshot", line.Product.Name);
-                itemCommand.Parameters.AddWithValue(
-                    "fulfillment_status_snapshot", line.Product.Status);
-                itemCommand.Parameters.AddWithValue(
-                    "unit_price", line.Product.Price);
-                itemCommand.Parameters.AddWithValue("quantity", (short)line.Quantity);
+                    "product_id",
+                    line.Product.Id);
 
-                itemCommand.Parameters.Add("size", NpgsqlDbType.Text).Value =
+                itemCommand.Parameters.AddWithValue(
+                    "product_slug_snapshot",
+                    line.Product.Slug);
+
+                itemCommand.Parameters.AddWithValue(
+                    "product_name_snapshot",
+                    line.Product.Name);
+
+                itemCommand.Parameters.AddWithValue(
+                    "fulfillment_status_snapshot",
+                    line.Product.Status);
+
+                itemCommand.Parameters.AddWithValue(
+                    "unit_price",
+                    line.Product.Price);
+
+                itemCommand.Parameters.AddWithValue(
+                    "quantity",
+                    (short)line.Quantity);
+
+                itemCommand.Parameters.Add(
+                    "size",
+                    NpgsqlDbType.Text).Value =
                     (object?)line.Size ?? DBNull.Value;
 
-                itemCommand.Parameters.AddWithValue("line_total", line.LineTotal);
+                itemCommand.Parameters.AddWithValue(
+                    "line_total",
+                    line.LineTotal);
 
-                await itemCommand.ExecuteNonQueryAsync(cancellationToken);
+                var result = await itemCommand.ExecuteScalarAsync(
+                    cancellationToken);
+
+                orderItemId = (Guid)result!;
+            }
+
+            // Pre-orders do not consume or reserve ready stock.
+            if (line.Product.Status != "ready")
+            {
+                continue;
+            }
+
+            // The conditional UPDATE is atomic.
+            // PostgreSQL locks the matching inventory row and
+            // rechecks the available quantity before updating it.
+            Guid inventoryId;
+
+            await using (var inventoryCommand =
+                         new NpgsqlCommand(
+                             reserveStockSql,
+                             connection,
+                             transaction))
+            {
+                inventoryCommand.Parameters.AddWithValue(
+                    "quantity",
+                    line.Quantity);
+
+                inventoryCommand.Parameters.AddWithValue(
+                    "created_at",
+                    createdAt);
+
+                inventoryCommand.Parameters.AddWithValue(
+                    "product_id",
+                    line.Product.Id);
+
+                inventoryCommand.Parameters.Add(
+                    "size",
+                    NpgsqlDbType.Text).Value =
+                    (object?)line.Size ?? DBNull.Value;
+
+                var result = await inventoryCommand.ExecuteScalarAsync(
+                    cancellationToken);
+
+                if (result is not Guid returnedInventoryId)
+                {
+                    throw new OrderValidationException(
+                        $"Insufficient stock for {line.Product.Name}" +
+                        (line.Size is null ? "." : $" (Size {line.Size})."));
+                }
+
+                inventoryId = returnedInventoryId;
+            }
+
+            // Record the reservation.
+            Guid reservationId;
+
+            await using (var reservationCommand =
+                         new NpgsqlCommand(
+                             insertReservationSql,
+                             connection,
+                             transaction))
+            {
+                reservationCommand.Parameters.AddWithValue(
+                    "inventory_id",
+                    inventoryId);
+
+                reservationCommand.Parameters.AddWithValue(
+                    "order_id",
+                    orderId);
+
+                reservationCommand.Parameters.AddWithValue(
+                    "order_item_id",
+                    orderItemId);
+
+                reservationCommand.Parameters.AddWithValue(
+                    "quantity",
+                    line.Quantity);
+
+                reservationCommand.Parameters.AddWithValue(
+                    "created_at",
+                    createdAt);
+
+                var result = await reservationCommand.ExecuteScalarAsync(
+                    cancellationToken);
+
+                reservationId = (Guid)result!;
+            }
+
+            // Record the stock movement for audit history.
+            await using (var movementCommand =
+                         new NpgsqlCommand(
+                             insertMovementSql,
+                             connection,
+                             transaction))
+            {
+                movementCommand.Parameters.AddWithValue(
+                    "inventory_id",
+                    inventoryId);
+
+                movementCommand.Parameters.AddWithValue(
+                    "product_id",
+                    line.Product.Id);
+
+                movementCommand.Parameters.AddWithValue(
+                    "reservation_id",
+                    reservationId);
+
+                movementCommand.Parameters.AddWithValue(
+                    "order_id",
+                    orderId);
+
+                movementCommand.Parameters.AddWithValue(
+                    "order_item_id",
+                    orderItemId);
+
+                movementCommand.Parameters.AddWithValue(
+                    "reserved_delta",
+                    line.Quantity);
+
+                movementCommand.Parameters.AddWithValue(
+                    "note",
+                    $"Stock reserved for order {orderCode}.");
+
+                movementCommand.Parameters.AddWithValue(
+                    "created_at",
+                    createdAt);
+
+                await movementCommand.ExecuteNonQueryAsync(
+                    cancellationToken);
             }
         }
 
+        // If any ready-stock reservation fails, the transaction
+        // is disposed without committing, rolling back the order,
+        // order items, reservations, and movement records.
         await transaction.CommitAsync(cancellationToken);
 
         return new CreateOrderResponse(
@@ -341,7 +669,10 @@ public sealed class OrderRepository
             createdAt);
     }
 
-    private sealed record RequestedLine(Guid ProductId, int Quantity, string? Size);
+    private sealed record RequestedLine(
+        Guid ProductId,
+        int Quantity,
+        string? Size);
 
     private sealed record ProductRow(
         Guid Id,

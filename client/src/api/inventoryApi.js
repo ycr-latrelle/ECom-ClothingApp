@@ -1,33 +1,3 @@
-// Inventory API service (scaffolding only).
-//
-// The ASP.NET Core inventory backend does not exist yet, so this file
-// deliberately contains no endpoint URLs, request payloads or response shapes.
-// Until they are filled in below, every call rejects with
-// InventoryUnavailableError, which the Inventory screen shows as a normal
-// "not available yet" state rather than an error.
-//
-// To connect the real backend, edit INVENTORY_API_CONFIG only:
-//
-//   listPath    - GET path returning the inventory records.
-//   summaryPath - GET path returning the overview figures.
-//   adjustPath  - function (productId) => path for a stock adjustment.
-//   mapRecords  - (rawResponse) => InventoryRecord[]
-//   mapSummary  - (rawResponse) => InventorySummary
-//
-// The mappers convert whatever the backend sends into the two internal shapes
-// below, so AdminInventory.jsx and utils/inventory.js never need to change.
-//
-// @typedef {Object} InventoryRecord
-// @property {string|number} productId  Matches the product `id` from the admin products API.
-// @property {number}        stock      Available units.
-// @property {string}  [sku]
-// @property {number}  [lowStockThreshold]  Only set when the backend defines one.
-// @property {string}  [updatedAt]          ISO 8601 timestamp.
-//
-// @typedef {Object} InventorySummary
-// @property {number} totalStockUnits
-// @property {number} lowStockProducts
-// @property {number} outOfStockProducts
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(
   /\/+$/,
@@ -35,11 +5,38 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(
 );
 
 export const INVENTORY_API_CONFIG = {
-  listPath: null,
-  summaryPath: null,
+  listPath: '/api/admin/inventory',
+  summaryPath: '/api/admin/inventory/summary',
   adjustPath: null,
-  mapRecords: null,
-  mapSummary: null,
+
+  mapRecords(rawResponse) {
+    if (!Array.isArray(rawResponse)) {
+      throw new Error('The inventory API returned an unexpected response.');
+    }
+
+    return rawResponse.map((item) => ({
+      productId: item.productId,
+      stock: Number(item.stock ?? 0),
+      sku: item.sku ?? null,
+      lowStockThreshold:
+        item.lowStockThreshold == null
+          ? null
+          : Number(item.lowStockThreshold),
+      updatedAt: item.updatedAt ?? null,
+    }));
+  },
+
+  mapSummary(rawResponse) {
+    if (!rawResponse || typeof rawResponse !== 'object') {
+      throw new Error('The inventory summary API returned an unexpected response.');
+    }
+
+    return {
+      totalStockUnits: Number(rawResponse.totalStockUnits ?? 0),
+      lowStockProducts: Number(rawResponse.lowStockProducts ?? 0),
+      outOfStockProducts: Number(rawResponse.outOfStockProducts ?? 0),
+    };
+  },
 };
 
 export class InventoryUnavailableError extends Error {
@@ -49,8 +46,6 @@ export class InventoryUnavailableError extends Error {
   }
 }
 
-// What the screen is allowed to attempt. A capability is only on when both its
-// path and (where a response is parsed) its mapper have been provided.
 export function getInventoryCapabilities() {
   const { listPath, summaryPath, adjustPath, mapRecords, mapSummary } =
     INVENTORY_API_CONFIG;
@@ -73,17 +68,20 @@ async function getAuthHeaders(user) {
 
   const token = await user.getIdToken();
 
-  return { Authorization: `Bearer ${token}` };
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 }
 
 async function handleResponse(response) {
   const responseText = await response.text();
+
   let result = null;
 
   try {
     result = responseText ? JSON.parse(responseText) : null;
   } catch {
-    // The response may not contain JSON.
+    // Keep the response as null when it is not JSON.
   }
 
   if (!response.ok) {
@@ -100,7 +98,9 @@ async function handleResponse(response) {
 export async function fetchInventory(user) {
   const { listPath, mapRecords } = INVENTORY_API_CONFIG;
 
-  if (!listPath || !mapRecords) throw new InventoryUnavailableError();
+  if (!listPath || !mapRecords) {
+    throw new InventoryUnavailableError();
+  }
 
   const headers = await getAuthHeaders(user);
 
@@ -122,7 +122,9 @@ export async function fetchInventory(user) {
 export async function fetchInventorySummary(user) {
   const { summaryPath, mapSummary } = INVENTORY_API_CONFIG;
 
-  if (!summaryPath || !mapSummary) throw new InventoryUnavailableError();
+  if (!summaryPath || !mapSummary) {
+    throw new InventoryUnavailableError();
+  }
 
   const headers = await getAuthHeaders(user);
 
@@ -135,19 +137,24 @@ export async function fetchInventorySummary(user) {
   return mapSummary(await handleResponse(response));
 }
 
-// The request body is defined by the backend contract, so it is passed through
-// untouched. The Inventory screen does not call this yet: the adjust-stock
-// control stays disabled until the contract and its form exist.
+// Stock adjustment remains disabled until its backend workflow is implemented.
 export async function adjustInventoryStock(user, productId, payload) {
   const { adjustPath } = INVENTORY_API_CONFIG;
 
-  if (!adjustPath) throw new InventoryUnavailableError();
+  if (!adjustPath) {
+    throw new InventoryUnavailableError(
+      'Stock adjustment is not available yet.',
+    );
+  }
 
   const headers = await getAuthHeaders(user);
 
   const response = await fetch(`${API_BASE_URL}${adjustPath(productId)}`, {
     method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   });
 
