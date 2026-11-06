@@ -1,3 +1,4 @@
+
 namespace server.Api.Models;
 
 public sealed record ProductResponse(
@@ -8,4 +9,5 @@ public sealed record ProductResponse(
     string Image,
     string Category,
     string Status,
-    string[] Sizes);
+    string[] Sizes,
+    string[] Colors);

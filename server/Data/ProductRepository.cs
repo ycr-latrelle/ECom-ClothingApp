@@ -21,7 +21,16 @@ public sealed class ProductRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT id, slug, name, price, image_path, category, status, sizes
+            SELECT
+                id,
+                slug,
+                name,
+                price,
+                image_path,
+                category,
+                status,
+                sizes,
+                colors
             FROM app_private.products
             WHERE is_active = TRUE
             ORDER BY name;
@@ -47,7 +56,8 @@ public sealed class ProductRepository
                 reader.GetString(4),
                 reader.GetString(5),
                 reader.GetString(6),
-                reader.GetFieldValue<string[]>(7)));
+                reader.GetFieldValue<string[]>(7),
+                reader.GetFieldValue<string[]>(8)));
         }
 
         return products;
@@ -70,6 +80,7 @@ public sealed class ProductRepository
                 category,
                 status,
                 sizes,
+                colors,
                 is_active,
                 is_mock
             FROM app_private.products
@@ -108,6 +119,7 @@ public sealed class ProductRepository
                 category,
                 status,
                 sizes,
+                colors,
                 is_active,
                 is_mock
             FROM app_private.products
@@ -138,9 +150,6 @@ public sealed class ProductRepository
     {
         var id = Guid.NewGuid();
 
-        // This endpoint will be implemented in the image-storage stage.
-        // Keeping the path stable means the product record does not need
-        // another update when its first image is uploaded.
         var imagePath = $"/api/products/{id}/images/primary";
 
         const string sql = """
@@ -153,6 +162,7 @@ public sealed class ProductRepository
                 category,
                 status,
                 sizes,
+                colors,
                 is_active,
                 is_mock,
                 created_at,
@@ -167,6 +177,7 @@ public sealed class ProductRepository
                 @category,
                 @status,
                 @sizes,
+                @colors,
                 @is_active,
                 @is_mock,
                 NOW(),
@@ -181,6 +192,7 @@ public sealed class ProductRepository
                 category,
                 status,
                 sizes,
+                colors,
                 is_active,
                 is_mock;
             """;
@@ -198,6 +210,7 @@ public sealed class ProductRepository
         command.Parameters.AddWithValue("category", request.Category);
         command.Parameters.AddWithValue("status", request.Status);
         command.Parameters.AddWithValue("sizes", NormalizeSizes(request.Sizes));
+        command.Parameters.AddWithValue("colors", NormalizeColors(request.Colors));
         command.Parameters.AddWithValue("is_active", request.IsActive);
         command.Parameters.AddWithValue("is_mock", request.IsMock);
 
@@ -223,6 +236,7 @@ public sealed class ProductRepository
                 category = @category,
                 status = @status,
                 sizes = @sizes,
+                colors = @colors,
                 is_active = @is_active,
                 is_mock = @is_mock,
                 updated_at = NOW()
@@ -236,6 +250,7 @@ public sealed class ProductRepository
                 category,
                 status,
                 sizes,
+                colors,
                 is_active,
                 is_mock;
             """;
@@ -252,6 +267,7 @@ public sealed class ProductRepository
         command.Parameters.AddWithValue("category", request.Category);
         command.Parameters.AddWithValue("status", request.Status);
         command.Parameters.AddWithValue("sizes", NormalizeSizes(request.Sizes));
+        command.Parameters.AddWithValue("colors", NormalizeColors(request.Colors));
         command.Parameters.AddWithValue("is_active", request.IsActive);
         command.Parameters.AddWithValue("is_mock", request.IsMock);
 
@@ -331,8 +347,9 @@ public sealed class ProductRepository
             reader.GetString(5),
             reader.GetString(6),
             reader.GetFieldValue<string[]>(7),
-            reader.GetBoolean(8),
-            reader.GetBoolean(9));
+            reader.GetFieldValue<string[]>(8),
+            reader.GetBoolean(9),
+            reader.GetBoolean(10));
     }
 
     private static string NormalizeSlug(string slug)
@@ -345,6 +362,15 @@ public sealed class ProductRepository
         return (sizes ?? [])
             .Where(size => !string.IsNullOrWhiteSpace(size))
             .Select(size => size.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string[] NormalizeColors(string[]? colors)
+    {
+        return (colors ?? [])
+            .Where(color => !string.IsNullOrWhiteSpace(color))
+            .Select(color => color.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

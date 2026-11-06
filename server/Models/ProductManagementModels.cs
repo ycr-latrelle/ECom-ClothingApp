@@ -30,6 +30,9 @@ public sealed class ProductUpsertRequest
     [MaxLength(20)]
     public string[] Sizes { get; set; } = [];
 
+    [MaxLength(20)]
+    public string[] Colors { get; set; } = [];
+
     public bool IsActive { get; set; } = true;
 
     public bool IsMock { get; set; } = false;
@@ -49,5 +52,6 @@ public sealed record AdminProductResponse(
     string Category,
     string Status,
     string[] Sizes,
+    string[] Colors,
     bool IsActive,
     bool IsMock);

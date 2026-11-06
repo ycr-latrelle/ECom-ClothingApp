@@ -38,6 +38,10 @@ public sealed class OrderRepository
                 "An order can contain at most 20 cart lines.");
         }
 
+        // --------------------------------------------------
+        // VALIDATE AND NORMALIZE CART LINES
+        // --------------------------------------------------
+
         var submittedLines = new List<RequestedLine>();
 
         foreach (var item in request.Items)
@@ -58,28 +62,40 @@ public sealed class OrderRepository
                 ? null
                 : item.Size.Trim().ToUpperInvariant();
 
+            var color = string.IsNullOrWhiteSpace(item.Color)
+                ? null
+                : item.Color.Trim();
+
             submittedLines.Add(new RequestedLine(
                 item.ProductId.Value,
                 item.Quantity,
+                color,
                 size));
         }
 
+        // Combine duplicate cart lines for the same variant.
         var lines = new List<RequestedLine>();
 
         foreach (var group in submittedLines.GroupBy(
-                     line => new { line.ProductId, line.Size }))
+                     line => new
+                     {
+                         line.ProductId,
+                         line.Color,
+                         line.Size
+                     }))
         {
             var quantity = group.Sum(line => line.Quantity);
 
             if (quantity > 10)
             {
                 throw new OrderValidationException(
-                    "The quantity for a product and size cannot exceed 10.");
+                    "The quantity for a product, color, and size cannot exceed 10.");
             }
 
             lines.Add(new RequestedLine(
                 group.Key.ProductId,
                 quantity,
+                group.Key.Color,
                 group.Key.Size));
         }
 
@@ -99,7 +115,14 @@ public sealed class OrderRepository
         // --------------------------------------------------
 
         const string getProductsSql = """
-            SELECT id, slug, name, price, status, sizes
+            SELECT
+                id,
+                slug,
+                name,
+                price,
+                status,
+                sizes,
+                colors
             FROM app_private.products
             WHERE id = ANY(@product_ids)
               AND is_active = TRUE;
@@ -107,8 +130,7 @@ public sealed class OrderRepository
 
         var products = new Dictionary<Guid, ProductRow>();
 
-        await using (var productCommand =
-                     new NpgsqlCommand(
+        await using (var productCommand = new NpgsqlCommand(
                          getProductsSql,
                          connection,
                          transaction))
@@ -128,7 +150,8 @@ public sealed class OrderRepository
                     reader.GetString(2),
                     reader.GetDecimal(3),
                     reader.GetString(4),
-                    reader.GetFieldValue<string[]>(5));
+                    reader.GetFieldValue<string[]>(5),
+                    reader.GetFieldValue<string[]>(6));
 
                 products.Add(product.Id, product);
             }
@@ -141,7 +164,7 @@ public sealed class OrderRepository
         }
 
         // --------------------------------------------------
-        // VALIDATE SIZES AND CALCULATE TOTALS
+        // VALIDATE COLORS AND SIZES, CALCULATE TOTALS
         // --------------------------------------------------
 
         var pricedLines = new List<PricedLine>();
@@ -153,20 +176,46 @@ public sealed class OrderRepository
         {
             var product = products[line.ProductId];
 
-            if (product.Sizes.Length == 0 && line.Size is not null)
+            // Validate color.
+            if (product.Colors.Length == 0)
             {
-                throw new OrderValidationException(
-                    $"{product.Name} does not have selectable sizes.");
+                if (line.Color is not null)
+                {
+                    throw new OrderValidationException(
+                        $"{product.Name} does not have selectable colors.");
+                }
+            }
+            else
+            {
+                if (line.Color is null ||
+                    !product.Colors.Contains(
+                        line.Color,
+                        StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new OrderValidationException(
+                        $"Choose a valid color for {product.Name}.");
+                }
             }
 
-            if (product.Sizes.Length > 0 &&
-                (line.Size is null ||
-                 !product.Sizes.Contains(
-                     line.Size,
-                     StringComparer.OrdinalIgnoreCase)))
+            // Validate size.
+            if (product.Sizes.Length == 0)
             {
-                throw new OrderValidationException(
-                    $"Choose a valid size for {product.Name}.");
+                if (line.Size is not null)
+                {
+                    throw new OrderValidationException(
+                        $"{product.Name} does not have selectable sizes.");
+                }
+            }
+            else
+            {
+                if (line.Size is null ||
+                    !product.Sizes.Contains(
+                        line.Size,
+                        StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new OrderValidationException(
+                        $"Choose a valid size for {product.Name}.");
+                }
             }
 
             var lineTotal = product.Price * line.Quantity;
@@ -183,6 +232,7 @@ public sealed class OrderRepository
             pricedLines.Add(new PricedLine(
                 product,
                 line.Quantity,
+                line.Color,
                 line.Size,
                 lineTotal));
         }
@@ -226,8 +276,7 @@ public sealed class OrderRepository
             );
             """;
 
-        await using (var orderCommand =
-                     new NpgsqlCommand(
+        await using (var orderCommand = new NpgsqlCommand(
                          insertOrderSql,
                          connection,
                          transaction))
@@ -350,8 +399,7 @@ public sealed class OrderRepository
             );
             """;
 
-        await using (var statusCommand =
-                     new NpgsqlCommand(
+        await using (var statusCommand = new NpgsqlCommand(
                          insertInitialStatusSql,
                          connection,
                          transaction))
@@ -371,10 +419,12 @@ public sealed class OrderRepository
         // INSERT ORDER ITEMS AND RESERVE READY STOCK
         // --------------------------------------------------
 
-        // A consistent lock order reduces the risk of deadlocks
-        // when two customers order overlapping product variants.
+        // Consistent lock order helps reduce deadlock risk.
         var orderedLines = pricedLines
             .OrderBy(line => line.Product.Id)
+            .ThenBy(
+                line => line.Color ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase)
             .ThenBy(
                 line => line.Size ?? string.Empty,
                 StringComparer.Ordinal)
@@ -389,6 +439,7 @@ public sealed class OrderRepository
                 fulfillment_status_snapshot,
                 unit_price,
                 quantity,
+                color,
                 size,
                 line_total
             )
@@ -400,6 +451,7 @@ public sealed class OrderRepository
                 @fulfillment_status_snapshot,
                 @unit_price,
                 @quantity,
+                @color,
                 @size,
                 @line_total
             )
@@ -412,6 +464,7 @@ public sealed class OrderRepository
                 reserved_quantity = reserved_quantity + @quantity,
                 updated_at = @created_at
             WHERE product_id = @product_id
+              AND lower(COALESCE(color, '')) = lower(COALESCE(@color, ''))
               AND size IS NOT DISTINCT FROM @size
               AND on_hand_quantity - reserved_quantity >= @quantity
             RETURNING id;
@@ -470,12 +523,11 @@ public sealed class OrderRepository
 
         foreach (var line in orderedLines)
         {
-            // First create the order item so the reservation
-            // can reference its actual database ID.
+            // Insert the order item first so reservations can
+            // reference its database ID.
             Guid orderItemId;
 
-            await using (var itemCommand =
-                         new NpgsqlCommand(
+            await using (var itemCommand = new NpgsqlCommand(
                              insertItemSql,
                              connection,
                              transaction))
@@ -509,6 +561,11 @@ public sealed class OrderRepository
                     (short)line.Quantity);
 
                 itemCommand.Parameters.Add(
+                    "color",
+                    NpgsqlDbType.Text).Value =
+                    (object?)line.Color ?? DBNull.Value;
+
+                itemCommand.Parameters.Add(
                     "size",
                     NpgsqlDbType.Text).Value =
                     (object?)line.Size ?? DBNull.Value;
@@ -523,19 +580,16 @@ public sealed class OrderRepository
                 orderItemId = (Guid)result!;
             }
 
-            // Pre-orders do not consume or reserve ready stock.
+            // Pre-orders do not reserve ready stock.
             if (line.Product.Status != "ready")
             {
                 continue;
             }
 
-            // The conditional UPDATE is atomic.
-            // PostgreSQL locks the matching inventory row and
-            // rechecks the available quantity before updating it.
+            // Reserve the exact product + color + size variant.
             Guid inventoryId;
 
-            await using (var inventoryCommand =
-                         new NpgsqlCommand(
+            await using (var inventoryCommand = new NpgsqlCommand(
                              reserveStockSql,
                              connection,
                              transaction))
@@ -553,6 +607,11 @@ public sealed class OrderRepository
                     line.Product.Id);
 
                 inventoryCommand.Parameters.Add(
+                    "color",
+                    NpgsqlDbType.Text).Value =
+                    (object?)line.Color ?? DBNull.Value;
+
+                inventoryCommand.Parameters.Add(
                     "size",
                     NpgsqlDbType.Text).Value =
                     (object?)line.Size ?? DBNull.Value;
@@ -562,19 +621,28 @@ public sealed class OrderRepository
 
                 if (result is not Guid returnedInventoryId)
                 {
+                    var variantDescription = string.Join(
+                        ", ",
+                        new[]
+                        {
+                            line.Color is null ? null : $"Color {line.Color}",
+                            line.Size is null ? null : $"Size {line.Size}"
+                        }.Where(value => value is not null));
+
                     throw new OrderValidationException(
                         $"Insufficient stock for {line.Product.Name}" +
-                        (line.Size is null ? "." : $" (Size {line.Size})."));
+                        (variantDescription.Length == 0
+                            ? "."
+                            : $" ({variantDescription})."));
                 }
 
                 inventoryId = returnedInventoryId;
             }
 
-            // Record the reservation.
+            // Record the inventory reservation.
             Guid reservationId;
 
-            await using (var reservationCommand =
-                         new NpgsqlCommand(
+            await using (var reservationCommand = new NpgsqlCommand(
                              insertReservationSql,
                              connection,
                              transaction))
@@ -606,8 +674,7 @@ public sealed class OrderRepository
             }
 
             // Record the stock movement for audit history.
-            await using (var movementCommand =
-                         new NpgsqlCommand(
+            await using (var movementCommand = new NpgsqlCommand(
                              insertMovementSql,
                              connection,
                              transaction))
@@ -649,9 +716,7 @@ public sealed class OrderRepository
             }
         }
 
-        // If any ready-stock reservation fails, the transaction
-        // is disposed without committing, rolling back the order,
-        // order items, reservations, and movement records.
+        // Any failure above prevents the transaction from committing.
         await transaction.CommitAsync(cancellationToken);
 
         return new CreateOrderResponse(
@@ -672,6 +737,7 @@ public sealed class OrderRepository
     private sealed record RequestedLine(
         Guid ProductId,
         int Quantity,
+        string? Color,
         string? Size);
 
     private sealed record ProductRow(
@@ -680,11 +746,13 @@ public sealed class OrderRepository
         string Name,
         decimal Price,
         string Status,
-        string[] Sizes);
+        string[] Sizes,
+        string[] Colors);
 
     private sealed record PricedLine(
         ProductRow Product,
         int Quantity,
+        string? Color,
         string? Size,
         decimal LineTotal);
 }

@@ -1,3 +1,4 @@
+
 using System.ComponentModel.DataAnnotations;
 
 namespace server.Api.Models;
@@ -68,4 +69,7 @@ public sealed class CreateOrderItemRequest
 
     [StringLength(20)]
     public string? Size { get; set; }
+
+    [StringLength(50)]
+    public string? Color { get; set; }
 }
