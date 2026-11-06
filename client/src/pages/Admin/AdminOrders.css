@@ -1,441 +1,552 @@
+/* =========================================================
+   ADMIN ORDERS — COMPLETE STYLES
+   ========================================================= */
 
-.admin-orders {
-  width: 100%;
-  color: #17212b;
+/* ---------- Summary cards ---------- */
+.admin-orders .ao-summary-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+  min-height: 122px;
+  padding: 19px 20px;
+  border: 1px solid #e8e8e5;
+  border-radius: 5px;
+  background: #fff;
 }
 
-.ao-error-notice {
-  border-color: #ebd4d0;
-  background: #fff6f4;
-  color: #98483e;
+.admin-orders .ao-summary-card > span {
+  display: block;
+  margin: 0;
+  color: #7b838a;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
-.ao-error-notice button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
+.admin-orders .ao-summary-card > strong {
+  display: block;
+  margin: 12px 0 5px;
+  color: #172a39;
+  font-family: var(--font-heading);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.15;
 }
 
-.ao-secondary-summary {
+.admin-orders .ao-summary-card > small {
+  display: block;
+  margin: 0;
+  color: #92999e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.admin-orders .ao-secondary-summary {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -13px 0 22px;
+  margin: -12px 0 23px;
   color: #858d92;
   font-size: 10px;
+  line-height: 1.5;
 }
 
-.ao-secondary-summary strong {
+.admin-orders .ao-secondary-summary strong {
   color: #263743;
+  font-weight: 700;
 }
 
-.ao-clear-button {
-  min-height: 39px;
-  padding: 0 11px;
-  border: 1px solid #e4e5e3;
-  border-radius: 3px;
-  background: white;
-  color: #53616a;
-  font: inherit;
-  font-size: 10px;
+/* ---------- Order list panel ---------- */
+.admin-orders .ap-catalog-panel {
+  border-color: #e5e5e1;
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgb(23 42 57 / 3%);
+}
+
+.admin-orders .ap-catalog-header {
+  min-height: 78px;
+  padding: 20px 22px;
+}
+
+.admin-orders .ap-catalog-header h2 {
+  font-size: 16px;
+}
+
+.admin-orders .ap-catalog-header p {
+  line-height: 1.5;
+}
+
+/* ---------- Toolbar: search + filters ---------- */
+.admin-orders .ap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 17px 20px;
+}
+
+.admin-orders .ap-search {
+  display: flex;
+  align-items: center;
+  flex: 1 1 280px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e5e5e1;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.admin-orders .ap-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.admin-orders .ap-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 130px;
+}
+
+.admin-orders .ap-filter > span {
+  color: #7b838a;
+  font-size: 9px;
+}
+
+.admin-orders .ap-filter select {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid #e5e5e1;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* ---------- Buttons ---------- */
+.admin-orders .ao-clear-button,
+.admin-orders .ao-view-button {
+  border: 1px solid #d9dddd;
+  background: #fff;
+  color: #263743;
+  font-family: inherit;
+  font-weight: 600;
   cursor: pointer;
+  transition: background .18s, border-color .18s;
 }
 
-.ao-clear-button:disabled {
+.admin-orders .ao-clear-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.admin-orders .ao-clear-button:hover:not(:disabled),
+.admin-orders .ao-view-button:hover {
+  border-color: #c8cece;
+  background: #f7f8f7;
+}
+
+.admin-orders .ao-clear-button:disabled {
   opacity: .5;
   cursor: not-allowed;
 }
 
-.ao-table th,
-.ao-table td {
+.admin-orders .ao-view-button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* ---------- Table ---------- */
+.admin-orders .ao-table {
+  min-width: 1050px;
+}
+
+.admin-orders .ao-table th,
+.admin-orders .ao-table td {
+  text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
-.ao-order-code {
+.admin-orders .ao-table th {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  font-size: 9px;
+  letter-spacing: .07em;
+}
+
+.admin-orders .ao-table td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  font-size: 10px;
+}
+
+.admin-orders .ao-order-code {
   display: block;
+  max-width: 220px;
+  overflow: hidden;
   color: #263743;
   font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ao-test-label {
+.admin-orders .ao-test-label {
   display: inline-block;
-  margin-top: 5px;
-  color: #a07837;
-  font-size: 9px;
-}
-
-.ao-customer-cell {
-  display: grid;
-  gap: 4px;
-  min-width: 145px;
-}
-
-.ao-customer-cell strong {
-  color: #263743;
-  font-size: 10px;
-}
-
-.ao-customer-cell small {
-  color: #92999e;
-  font-size: 9px;
-}
-
-.ao-total {
-  color: #172a39 !important;
-  font-weight: 700;
-}
-
-.ao-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 180px;
-  padding: 5px 8px;
+  margin-top: 4px;
+  padding: 2px 6px;
   border-radius: 3px;
-  background: #f0f1f1;
-  color: #59646b;
+  background: #fff4dc;
+  color: #9a6a00;
   font-size: 9px;
-  line-height: 1.35;
-  white-space: normal;
-  text-align: center;
-}
-
-.ao-status-awaiting-payment,
-.ao-status-awaiting-submission {
-  background: #fff4e5;
-  color: #946b29;
-}
-
-.ao-status-pending-verification,
-.ao-status-processing,
-.ao-status-ready-for-shipment {
-  background: #edf3f8;
-  color: #46647b;
-}
-
-.ao-status-verified,
-.ao-status-completed,
-.ao-status-shipped {
-  background: #edf5ef;
-  color: #477354;
-}
-
-.ao-status-rejected,
-.ao-status-cancelled {
-  background: #fff0ed;
-  color: #a94e40;
-}
-
-.ao-view-button {
-  padding: 5px 0;
-  border: 0;
-  background: transparent;
-  color: #536d7e;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.ao-view-button:hover {
-  color: #d95843;
-  text-decoration: underline;
-}
-
-.ao-mobile-list {
-  display: none;
-}
-
-.ao-backdrop {
-  z-index: 310;
-}
-
-.ao-modal {
-  width: min(100%, 760px);
-}
-
-.ao-detail-content {
-  display: grid;
-  gap: 0;
-  padding: 0 24px;
-}
-
-.ao-detail-section {
-  padding: 20px 0;
-  border-bottom: 1px solid #ededeb;
-}
-
-.ao-detail-section h3 {
-  margin: 0 0 14px;
-  color: #263743;
-  font-family: var(--font-heading);
-  font-size: 13px;
-}
-
-.ao-status-overview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-}
-
-.ao-status-overview > div {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-}
-
-.ao-status-overview > div > span {
-  color: #858d92;
-  font-size: 10px;
-}
-
-.ao-detail-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 9px 0;
-  font-size: 10px;
-}
-
-.ao-detail-row > span {
-  flex: 0 0 38%;
-  color: #858d92;
-}
-
-.ao-detail-row > strong {
-  color: #263743;
   font-weight: 600;
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
-.ao-items-list {
-  display: grid;
-  gap: 0;
-}
-
-.ao-item,
-.ao-payment {
+.admin-orders .ao-customer-cell {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 13px 0;
-  border-top: 1px solid #f0f0ee;
-  font-size: 10px;
-}
-
-.ao-item > div,
-.ao-payment > div:first-child {
-  display: grid;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
-.ao-item strong,
-.ao-payment strong {
-  color: #263743;
+.admin-orders .ao-customer-cell strong {
+  font-size: 11px;
 }
 
-.ao-item span,
-.ao-payment span {
-  color: #858d92;
+.admin-orders .ao-customer-cell small {
+  color: #7b838a;
+  font-size: 10px;
+}
+
+.admin-orders .ao-status {
+  max-width: 170px;
+  padding: 6px 9px;
+  border-radius: 4px;
   font-size: 9px;
-  line-height: 1.5;
+  font-weight: 600;
 }
 
-.ao-item > strong {
-  flex: 0 0 auto;
+/* ---------- Mobile card list (hidden on desktop) ---------- */
+.admin-orders .ao-mobile-list {
+  display: none;
 }
 
-.ao-payment > div:last-child {
+.admin-orders .ao-mobile-order {
   display: grid;
-  justify-items: end;
-  gap: 7px;
-  flex: 0 0 auto;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e8e8e5;
+  border-radius: 5px;
+  background: #fff;
+  color: #5f6a72;
+  font-size: 11px;
 }
 
-.ao-rejection {
-  color: #a94e40 !important;
+.admin-orders .ao-mobile-order > strong {
+  color: #172a39;
+  font-size: 13px;
 }
 
-.ao-total-row {
+.admin-orders .ao-mobile-order-heading,
+.admin-orders .ao-mobile-facts {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  margin-top: 10px;
-  padding-top: 14px;
-  border-top: 1px solid #dedfdd;
+  gap: 10px;
+}
+
+.admin-orders .ao-mobile-order-heading strong {
+  min-width: 0;
+  overflow: hidden;
   color: #263743;
   font-size: 11px;
-  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ao-muted {
+.admin-orders .ao-mobile-order-heading span {
+  flex-shrink: 0;
   color: #92999e;
   font-size: 10px;
 }
 
-.ao-timeline {
+.admin-orders .ao-mobile-facts strong {
+  color: #172a39;
+  font-size: 13px;
+}
+
+.admin-orders .ao-mobile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-orders .ao-mobile-order .ao-view-button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+/* ---------- Pagination, loading, empty states ---------- */
+.admin-orders .ap-pagination {
+  min-height: 58px;
+}
+
+.admin-orders .ap-state {
+  min-height: 220px;
+}
+
+/* ---------- Order details modal ----------
+   If your base stylesheet already styles these, you can delete
+   this whole section. */
+.admin-orders .ao-detail-content {
   display: grid;
-  gap: 0;
+  gap: 18px;
+  max-height: 65vh;
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.admin-orders .ao-detail-section {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eeeeea;
+}
+
+.admin-orders .ao-detail-section h3 {
+  margin: 0 0 4px;
+  color: #172a39;
+  font-size: 12px;
+}
+
+.admin-orders .ao-detail-row,
+.admin-orders .ao-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+}
+
+.admin-orders .ao-detail-row span,
+.admin-orders .ao-muted {
+  color: #7b838a;
+}
+
+.admin-orders .ao-detail-row strong {
+  color: #263743;
+  text-align: right;
+}
+
+.admin-orders .ao-total-row {
+  padding-top: 10px;
+  border-top: 1px solid #eeeeea;
+  color: #172a39;
+  font-weight: 700;
+}
+
+.admin-orders .ao-status-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.admin-orders .ao-status-overview > div {
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+  color: #7b838a;
+}
+
+.admin-orders .ao-item,
+.admin-orders .ao-payment {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e8e8e5;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.admin-orders .ao-item > div,
+.admin-orders .ao-payment > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-orders .ao-payment > div:last-child {
+  justify-items: end;
+}
+
+.admin-orders .ao-item span,
+.admin-orders .ao-payment span {
+  color: #7b838a;
+  font-size: 10px;
+}
+
+.admin-orders .ao-rejection {
+  color: #b3261e !important;
+}
+
+.admin-orders .ao-items-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-orders .ao-timeline {
+  display: grid;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ao-timeline li {
-  position: relative;
+.admin-orders .ao-timeline li {
   display: flex;
-  gap: 12px;
-  padding-bottom: 19px;
+  gap: 10px;
 }
 
-.ao-timeline li:not(:last-child)::before {
-  position: absolute;
-  top: 12px;
-  bottom: 0;
-  left: 5px;
-  width: 1px;
-  background: #e2e5e3;
-  content: '';
-}
-
-.ao-timeline-dot {
-  position: relative;
-  z-index: 1;
-  flex: 0 0 11px;
-  width: 11px;
-  height: 11px;
-  margin-top: 2px;
-  border: 2px solid #536d7e;
+.admin-orders .ao-timeline-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
   border-radius: 50%;
-  background: white;
+  background: #172a39;
 }
 
-.ao-timeline li > div {
-  display: grid;
-  gap: 5px;
-}
-
-.ao-timeline strong {
-  color: #263743;
+.admin-orders .ao-timeline p {
+  margin: 2px 0;
+  color: #5f6a72;
   font-size: 10px;
 }
 
-.ao-timeline p {
-  margin: 0;
-  color: #69757c;
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.ao-timeline small {
+.admin-orders .ao-timeline small {
   color: #92999e;
   font-size: 9px;
 }
 
-.ao-detail-footnote {
-  margin: 18px 0;
-  padding: 12px;
-  border: 1px solid #e8e8e5;
-  background: #fafaf8;
-  color: #858d92;
-  font-size: 9px;
-  line-height: 1.6;
+.admin-orders .ao-detail-footnote {
+  margin: 0;
+  color: #92999e;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
+/* =========================================================
+   RESPONSIVE (keep at the bottom so these override the above)
+   ========================================================= */
+
+/* Tablet */
+@media (max-width: 1050px) {
+  .admin-orders .ap-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-orders .ap-toolbar {
+    align-items: stretch;
+  }
+
+  .admin-orders .ap-search {
+    flex-basis: 100%;
+  }
+
+  .admin-orders .ap-filter {
+    flex: 1 1 150px;
+  }
+}
+
+/* Mobile */
 @media (max-width: 760px) {
-  .ao-table {
-    min-width: 950px;
+  .admin-orders .ap-table-wrap {
+    display: none;
   }
 
-  .ao-mobile-list {
+  .admin-orders .ao-mobile-list {
     display: grid;
+    gap: 10px;
+    padding: 14px;
   }
 
-  .ao-mobile-order {
+  .admin-orders .ao-summary-card {
+    min-height: 108px;
+    padding: 15px;
+  }
+
+  .admin-orders .ao-summary-card > strong {
+    margin-top: 9px;
+    font-size: 23px;
+  }
+
+  .admin-orders .ao-secondary-summary {
+    margin-top: -10px;
+  }
+
+  .admin-orders .ap-catalog-header {
+    padding: 17px;
+  }
+
+  .admin-orders .ap-toolbar {
     display: grid;
-    gap: 8px;
-    padding: 17px 18px;
-    border-top: 1px solid #ededeb;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 15px;
   }
 
-  .ao-mobile-order > strong {
-    color: #263743;
-    font-size: 11px;
+  .admin-orders .ap-search {
+    grid-column: 1 / -1;
+    min-width: 0;
   }
 
-  .ao-mobile-order > span {
-    color: #858d92;
-    font-size: 9px;
+  .admin-orders .ap-filter {
+    min-width: 0;
   }
 
-  .ao-mobile-order-heading,
-  .ao-mobile-facts,
-  .ao-mobile-badges {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
+  .admin-orders .ao-clear-button {
+    grid-column: 1 / -1;
   }
 
-  .ao-mobile-order-heading strong {
-    color: #263743;
-    font-size: 11px;
-  }
-
-  .ao-mobile-order-heading span,
-  .ao-mobile-facts span {
-    color: #858d92;
-    font-size: 9px;
-  }
-
-  .ao-mobile-facts strong {
-    color: #172a39;
-    font-size: 11px;
-  }
-
-  .ao-mobile-order .ao-view-button {
-    justify-self: start;
-    margin-top: 4px;
-  }
-
-  .ao-detail-content {
-    padding: 0 18px;
-  }
-
-  .ao-detail-row {
-    gap: 12px;
+  .admin-orders .ao-modal {
+    width: calc(100% - 24px);
   }
 }
 
-@media (max-width: 560px) {
-  .ao-secondary-summary {
+@media (max-width: 480px) {
+  .admin-orders .ap-summary-grid {
+    gap: 9px;
+  }
+
+  .admin-orders .ao-summary-card {
+    min-height: 100px;
+    padding: 12px;
+  }
+
+  .admin-orders .ao-summary-card > strong {
+    font-size: 21px;
+  }
+
+  .admin-orders .ap-pagination {
     align-items: flex-start;
     flex-direction: column;
+    padding: 14px;
   }
 
-  .ao-status-overview {
-    gap: 18px;
-  }
-
-  .ao-modal {
-    max-height: calc(100dvh - 24px);
-  }
-
-  .ao-detail-section {
-    padding: 16px 0;
-  }
-
-  .ao-item,
-  .ao-payment {
-    gap: 9px;
+  .admin-orders .ap-pagination > div {
+    width: 100%;
+    justify-content: space-between;
   }
 }
