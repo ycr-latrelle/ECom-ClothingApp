@@ -1,0 +1,206 @@
+/*
+  Admin Inventory.
+
+  Layout, table, toolbar, pagination, modal and state styles come from
+  AdminProducts.css (ap-*). Only what is specific to inventory lives here.
+*/
+
+/* Muted placeholder for values that are not available yet */
+
+.ai-muted {
+  color: #9a9fa2;
+  font-size: 9px;
+}
+
+.ai-pending-value {
+  color: #9a9fa2 !important;
+  font-size: 15px !important;
+  font-weight: 600;
+}
+
+.ai-stock {
+  color: #172a39;
+  font-size: 11px;
+}
+
+.ai-identifier {
+  display: inline-block;
+  max-width: 150px;
+  overflow: hidden;
+  color: #6c767c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.ai-identifier-wrap {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+}
+
+/* Notices */
+
+.ai-notice-error {
+  border-color: #efd0c9;
+  background: #fff5f2;
+  color: #a44335;
+}
+
+.ai-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Inventory status pills */
+
+.ai-inventory-pill {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 3px;
+  background: #f1f2f2;
+  color: #7b838a;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.ai-inventory-pill.in-stock {
+  background: #eef4f0;
+  color: #477354;
+}
+
+.ai-inventory-pill.low-stock {
+  background: #fff6e5;
+  color: #98690f;
+}
+
+.ai-inventory-pill.out-of-stock {
+  background: #fff1ed;
+  color: #b74d3c;
+}
+
+/* Product status: listing state above availability */
+
+.ai-product-status {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+/* Row actions */
+
+.ai-actions {
+  flex-wrap: wrap;
+}
+
+.ai-row-link {
+  padding: 4px 0;
+  color: #536d7e;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.ai-row-link:hover {
+  color: #d95843;
+}
+
+.ai-actions button:disabled {
+  color: #b3b8bb;
+  cursor: not-allowed;
+}
+
+.ai-actions button:disabled:hover {
+  color: #b3b8bb;
+}
+
+/* Details modal */
+
+.ai-detail-footer {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ai-footer-hint {
+  margin-right: auto;
+  color: #9a9fa2;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.ai-detail-footer a.ap-secondary-button {
+  text-decoration: none;
+}
+
+.ai-detail-footer .ap-primary-button:disabled {
+  cursor: not-allowed;
+}
+
+.admin-products-heading a.ap-secondary-button {
+  text-decoration: none;
+}
+
+.ap-state a.ap-secondary-button {
+  text-decoration: none;
+}
+
+/* Keep long product IDs from stretching the table */
+
+.ai-inventory-table td {
+  vertical-align: middle;
+}
+
+/* Mobile cards: key facts in a compact two-column grid */
+
+.ai-mobile-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 12px 0 0;
+  padding: 12px 0 0 56px;
+}
+
+.ai-mobile-facts > div {
+  min-width: 0;
+}
+
+.ai-mobile-facts dt {
+  margin-bottom: 4px;
+  color: #92999e;
+  font-size: 9px;
+}
+
+.ai-mobile-facts dd {
+  margin: 0;
+  color: #46535b;
+  font-size: 10px;
+}
+
+.ai-mobile-facts .ai-identifier {
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .ai-mobile-facts {
+    padding-left: 0;
+  }
+
+  .ap-mobile-product-actions.ai-actions {
+    padding-left: 0;
+  }
+
+  .ai-detail-footer .ap-secondary-button,
+  .ai-detail-footer .ap-primary-button {
+    flex: 1 1 auto;
+  }
+
+  .ai-footer-hint {
+    flex-basis: 100%;
+  }
+}
