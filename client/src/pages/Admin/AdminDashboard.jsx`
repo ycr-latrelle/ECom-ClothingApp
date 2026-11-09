@@ -1,0 +1,149 @@
+
+import { Link } from 'react-router-dom';
+import AdminPageHeader from '../../components/Admin/AdminPageHeader';
+import AdminStatCard from '../../components/Admin/AdminStatCard';
+import './AdminDashboard.css';
+
+const metrics = [
+  {
+    label: 'Total Revenue',
+    value: '—',
+    description: 'Awaiting sales data',
+    icon: '₱',
+  },
+  {
+    label: 'Total Orders',
+    value: '—',
+    description: 'Awaiting order data',
+    icon: '▤',
+  },
+  {
+    label: 'Products',
+    value: '—',
+    description: 'Awaiting catalog data',
+    icon: '◇',
+  },
+  {
+    label: 'Pending Payments',
+    value: '—',
+    description: 'Awaiting payment data',
+    icon: '₱',
+  },
+];
+
+const shortcuts = [
+  {
+    title: 'Manage Products',
+    description: 'Create, update, and organize your store catalog.',
+    path: '/admin/products',
+    icon: '◇',
+  },
+  {
+    title: 'Review Orders',
+    description: 'View customer purchases and manage order progress.',
+    path: '/admin/orders',
+    icon: '▤',
+  },
+  {
+    title: 'Verify Payments',
+    description: 'Review customer payment submissions and receipts.',
+    path: '/admin/payments',
+    icon: '₱',
+  },
+  {
+    title: 'Manage Shipments',
+    description: 'Update courier details and tracking information.',
+    path: '/admin/shipments',
+    icon: '⇢',
+  },
+];
+
+export default function AdminDashboard() {
+  return (
+    <div className="admin-dashboard">
+      <AdminPageHeader
+        eyebrow="STORE MANAGEMENT"
+        title="Overview"
+        description="Welcome to your Thread / Theory administration workspace."
+      />
+
+      <section className="admin-metrics-grid" aria-label="Store metrics">
+        {metrics.map((metric) => (
+          <AdminStatCard
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+            description={metric.description}
+            icon={metric.icon}
+          />
+        ))}
+      </section>
+
+      <section className="admin-dashboard-section">
+        <div className="admin-section-heading">
+          <div>
+            <h2 className="admin-section-title">Quick access</h2>
+            <p className="admin-section-description">Common store management tasks.</p>
+          </div>
+        </div>
+
+        <div className="admin-shortcuts-grid">
+          {shortcuts.map((shortcut) => (
+            <Link
+              to={shortcut.path}
+              className="admin-shortcut-card"
+              key={shortcut.path}
+            >
+              <span className="admin-shortcut-icon">{shortcut.icon}</span>
+
+              <div className="admin-shortcut-text">
+                <h3 className="admin-shortcut-title">{shortcut.title}</h3>
+                <p className="admin-shortcut-description">{shortcut.description}</p>
+              </div>
+
+              <span className="admin-shortcut-arrow">↗</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-dashboard-section">
+        <div className="admin-section-heading">
+          <div>
+            <h2 className="admin-section-title">System status</h2>
+            <p className="admin-section-description">Dashboard integration progress.</p>
+          </div>
+        </div>
+
+        <div className="admin-status-panel">
+          <div className="admin-status-row">
+            <span className="admin-status-dot connected" />
+            <div className="admin-status-text">
+              <strong className="admin-status-title">Dashboard interface</strong>
+              <p className="admin-status-description">Initial frontend layout is available.</p>
+            </div>
+            <span className="admin-status-label">Available</span>
+          </div>
+
+          <div className="admin-status-row">
+            <span className="admin-status-dot pending" />
+            <div className="admin-status-text">
+              <strong className="admin-status-title">Database-backed authorization</strong>
+              <p className="admin-status-description">Owner, Admin, and Seller permissions are not connected.</p>
+            </div>
+            <span className="admin-status-label pending-text">Pending</span>
+          </div>
+
+          <div className="admin-status-row">
+            <span className="admin-status-dot pending" />
+            <div className="admin-status-text">
+              <strong className="admin-status-title">Dashboard analytics</strong>
+              <p className="admin-status-description">Real sales and order statistics are not connected.</p>
+            </div>
+            <span className="admin-status-label pending-text">Pending</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

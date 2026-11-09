@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
+import '../../styles/admin-theme.css';
 import './AdminLayout.css';
 
 const navigation = [

@@ -1,0 +1,49 @@
+.admin-stat-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  padding: 24px;
+  border-radius: var(--admin-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: var(--admin-transition);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-stat-card:hover {
+  border-color: var(--admin-accent);
+}
+
+.admin-stat-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.admin-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-text-secondary);
+}
+
+.admin-stat-icon {
+  font-size: 18px;
+  color: var(--admin-text-secondary);
+}
+
+.admin-stat-value {
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--admin-text-primary);
+  line-height: 1;
+  margin: 8px 0;
+}
+
+.admin-stat-description {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}

@@ -1,0 +1,41 @@
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  gap: 24px;
+}
+
+.admin-page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-page-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}
+
+.admin-page-title {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--admin-text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.admin-page-description {
+  font-size: 14px;
+  color: var(--admin-text-secondary);
+  margin: 8px 0 0 0;
+}
+
+.admin-page-header-actions {
+  display: flex;
+  gap: 12px;
+}
