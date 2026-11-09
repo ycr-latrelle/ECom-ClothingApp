@@ -220,7 +220,7 @@
 }
 
 .cart-footer {
-  padding: 20px 24px 24px;
+  padding: 20px 24px calc(24px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--color-line);
 }
 

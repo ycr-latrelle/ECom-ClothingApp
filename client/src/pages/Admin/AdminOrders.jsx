@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/useAuth.js';
 import { fetchAdminOrders, AdminOrdersApiError } from '../../api/adminOrderApi.js';
+import AdminDataTable from '../../components/Admin/AdminDataTable.jsx';
+import AdminModal from '../../components/Admin/AdminModal.jsx';
 import './AdminOrders.css';
 
 const PAGE_SIZE = 8;
@@ -183,6 +185,45 @@ export default function AdminOrders() {
   const pageOrders = filteredOrders.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
+  );
+  const orderColumns = [
+    { key: 'order', label: 'Order' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'date', label: 'Date' },
+    { key: 'items', label: 'Items' },
+    { key: 'total', label: 'Total' },
+    { key: 'payment', label: 'Payment' },
+    { key: 'status', label: 'Order status' },
+    { key: 'actions', label: '' },
+  ];
+
+  const renderOrderRow = (order) => (
+    <>
+      <td>
+        <strong className="ao-order-code">{order.orderCode || '—'}</strong>
+        {order.isTest && <small className="ao-test-label">Test order</small>}
+      </td>
+      <td>
+        <div className="ao-customer-cell">
+          <strong>{order.customerFullName || 'Unknown customer'}</strong>
+          <small>{order.customerEmail || '—'}</small>
+        </div>
+      </td>
+      <td>{dateTime(order.createdAt)}</td>
+      <td>{getItemCount(order)}</td>
+      <td className="ao-total">{money(getOrderTotal(order))}</td>
+      <td><StatusBadge value={order.paymentStatus} /></td>
+      <td><StatusBadge value={order.orderStatus} /></td>
+      <td>
+        <button
+          type="button"
+          className="ao-view-button"
+          onClick={() => setSelectedOrder(order)}
+        >
+          View details
+        </button>
+      </td>
+    </>
   );
 
   function updateFilter(setter, value) {
@@ -390,55 +431,14 @@ export default function AdminOrders() {
           </div>
         ) : (
           <>
-            <div className="ap-table-wrap">
-              <table className="ap-product-table ao-table">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                    <th>Order status</th>
-                    <th />
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pageOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td>
-                        <strong className="ao-order-code">
-                          {order.orderCode || '—'}
-                        </strong>
-                        {order.isTest && <small className="ao-test-label">Test order</small>}
-                      </td>
-                      <td>
-                        <div className="ao-customer-cell">
-                          <strong>{order.customerFullName || 'Unknown customer'}</strong>
-                          <small>{order.customerEmail || '—'}</small>
-                        </div>
-                      </td>
-                      <td>{dateTime(order.createdAt)}</td>
-                      <td>{getItemCount(order)}</td>
-                      <td className="ao-total">{money(getOrderTotal(order))}</td>
-                      <td><StatusBadge value={order.paymentStatus} /></td>
-                      <td><StatusBadge value={order.orderStatus} /></td>
-                      <td>
-                        <button
-                          type="button"
-                          className="ao-view-button"
-                          onClick={() => setSelectedOrder(order)}
-                        >
-                          View details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminDataTable
+              className="ao-desktop-table"
+              tableClassName="ao-table"
+              columns={orderColumns}
+              data={pageOrders}
+              getRowKey={(order) => order.id}
+              renderRow={renderOrderRow}
+            />
 
             <div className="ao-mobile-list">
               {pageOrders.map((order) => (
@@ -516,15 +516,6 @@ function DetailRow({ title, children }) {
 }
 
 function OrderDetails({ order, onClose }) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') onClose();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
   const address = [
     order.streetAddress,
     order.barangay,
@@ -534,34 +525,19 @@ function OrderDetails({ order, onClose }) {
   ].filter(Boolean).join(', ');
 
   return (
-    <div
-      className="ap-modal-backdrop ao-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <AdminModal
+      isOpen
+      onClose={onClose}
+      title={order.orderCode || 'Order details'}
+      subtitle={`Placed ${dateTime(order.createdAt)}`}
+      size="md"
+      dialogClassName="ao-modal"
+      footer={
+        <button type="button" className="ap-secondary-button" onClick={onClose}>
+          Close
+        </button>
+      }
     >
-      <section
-        className="ap-modal ao-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ao-detail-title"
-      >
-        <header className="ap-modal-header">
-          <div>
-            <p className="eyebrow">ORDER DETAILS</p>
-            <h2 id="ao-detail-title">{order.orderCode || 'Order details'}</h2>
-            <p>Placed {dateTime(order.createdAt)}</p>
-          </div>
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            aria-label="Close order details"
-          >
-            ×
-          </button>
-        </header>
-
         <div className="ao-detail-content">
           <section className="ao-detail-section">
             <h3>Order status</h3>
@@ -682,13 +658,6 @@ function OrderDetails({ order, onClose }) {
             shipment management require separate authorized backend operations.
           </p>
         </div>
-
-        <footer className="ap-modal-footer">
-          <button type="button" className="ap-secondary-button" onClick={onClose}>
-            Close
-          </button>
-        </footer>
-      </section>
-    </div>
+    </AdminModal>
   );
 }

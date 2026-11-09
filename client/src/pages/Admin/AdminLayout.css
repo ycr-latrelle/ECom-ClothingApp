@@ -28,6 +28,7 @@
   flex-direction: column;
   width: 260px;
   height: 100vh;
+  height: 100dvh;
   background: var(--admin-sidebar-bg);
   color: white;
 }
@@ -295,6 +296,8 @@
 
   .admin-menu-button {
     display: block;
+    min-width: 44px;
+    min-height: 44px;
     padding: 7px 10px;
     border: 1px solid var(--admin-border);
     border-radius: var(--admin-radius-sm);
@@ -313,6 +316,8 @@
 
   .admin-mobile-close {
     display: block;
+    min-width: 44px;
+    min-height: 44px;
     margin-left: auto;
     border: 0;
     background: transparent;
@@ -326,7 +331,7 @@
   .admin-topbar {
     min-height: 62px;
     padding: 0 16px;
-}
+  }
 
   .admin-breadcrumb {
     font-size: 10px;
@@ -350,5 +355,26 @@
 
   .admin-footer {
     font-size: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-content {
+    padding: 20px 12px;
+  }
+
+  .admin-topbar {
+    padding: 0 12px;
+  }
+
+  .admin-breadcrumb {
+    min-width: 0;
+    gap: 6px;
+    font-size: 9px;
+  }
+
+  .admin-topbar-avatar {
+    width: 30px;
+    height: 30px;
   }
 }

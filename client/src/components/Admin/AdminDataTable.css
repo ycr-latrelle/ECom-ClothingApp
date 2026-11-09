@@ -1,0 +1,53 @@
+.admin-data-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.admin-data-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-data-table th {
+  padding: 13px 15px;
+  background: #fafaf8;
+  color: #858d92;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-data-table th:first-child,
+.admin-data-table td:first-child {
+  padding-left: 21px;
+}
+
+.admin-data-table td {
+  padding: 13px 15px;
+  border-top: 1px solid #f0f0ee;
+  color: #46535b;
+  font-size: 10px;
+}
+
+.admin-data-table-state {
+  padding: 36px 20px !important;
+  color: #858d92 !important;
+  text-align: center;
+  white-space: normal;
+}
+
+.admin-data-table-error {
+  color: #a44335 !important;
+}
+
+@media (max-width: 760px) {
+  .admin-data-table {
+    min-width: 700px;
+  }
+}

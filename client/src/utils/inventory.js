@@ -24,7 +24,7 @@ export const isProductActive = (product) =>
 export function getInventoryStatus(record) {
   if (!record) return INVENTORY_STATUS.UNKNOWN;
 
-  const available = Number(record.availableQuantity);
+  const available = Number(record.availableQuantity ?? record.stock);
 
   if (!Number.isFinite(available)) return INVENTORY_STATUS.UNKNOWN;
   if (available <= 0) return INVENTORY_STATUS.OUT_OF_STOCK;
@@ -50,10 +50,39 @@ export function getProductInventory(records, productId) {
 }
 
 export function getProductStockTotal(records) {
-  return records.reduce(
-    (total, record) => total + Number(record.availableQuantity || 0),
+  return (records || []).reduce(
+    (total, record) =>
+      total + Number(record.availableQuantity ?? record.stock ?? 0),
     0,
   );
+}
+
+function getRowRecords(row) {
+  if (Array.isArray(row.records)) return row.records;
+  return row.record ? [row.record] : [];
+}
+
+function getSortableStock(records) {
+  if (!records.length) return null;
+
+  const quantities = records.map((record) =>
+    Number(record.availableQuantity ?? record.stock),
+  );
+  if (quantities.some((quantity) => !Number.isFinite(quantity))) return null;
+
+  return quantities.reduce((total, quantity) => total + quantity, 0);
+}
+
+function getSortableUpdatedAt(records) {
+  const timestamps = records
+    .map((record) =>
+      record.updatedAt == null
+        ? Number.NaN
+        : new Date(record.updatedAt).getTime(),
+    )
+    .filter(Number.isFinite);
+
+  return timestamps.length ? Math.max(...timestamps) : null;
 }
 
 export function filterInventoryRows(rows, filters) {
@@ -62,7 +91,9 @@ export function filterInventoryRows(rows, filters) {
   const productStatus = filters.productStatus || 'all';
   const inventoryStatus = filters.inventoryStatus || 'all';
 
-  return rows.filter(({ product, records }) => {
+  return rows.filter((row) => {
+    const { product } = row;
+    const records = getRowRecords(row);
     const matchesSearch =
       !query ||
       [
@@ -90,7 +121,9 @@ export function filterInventoryRows(rows, filters) {
       (productStatus === 'ready' && availability === 'ready') ||
       (productStatus === 'pre-order' && availability === 'pre-order');
 
-    const statuses = records.map(getInventoryStatus);
+    const statuses = records.length
+      ? records.map(getInventoryStatus)
+      : [INVENTORY_STATUS.UNKNOWN];
 
     const matchesInventory =
       inventoryStatus === 'all' ||
@@ -120,18 +153,34 @@ export function sortInventoryRows(rows, sort) {
       );
 
     case 'stock-asc':
-      return sorted.sort(
-        (a, b) =>
-          getProductStockTotal(a.records) -
-          getProductStockTotal(b.records),
-      );
+      return sorted.sort((a, b) => {
+        const aStock = getSortableStock(getRowRecords(a));
+        const bStock = getSortableStock(getRowRecords(b));
+        if (aStock === null) return bStock === null ? 0 : 1;
+        if (bStock === null) return -1;
+        return aStock - bStock;
+      });
 
     case 'stock-desc':
-      return sorted.sort(
-        (a, b) =>
-          getProductStockTotal(b.records) -
-          getProductStockTotal(a.records),
-      );
+      return sorted.sort((a, b) => {
+        const aStock = getSortableStock(getRowRecords(a));
+        const bStock = getSortableStock(getRowRecords(b));
+        if (aStock === null) return bStock === null ? 0 : 1;
+        if (bStock === null) return -1;
+        return bStock - aStock;
+      });
+
+    case 'updated-asc':
+    case 'updated-desc':
+      return sorted.sort((a, b) => {
+        const aUpdatedAt = getSortableUpdatedAt(getRowRecords(a));
+        const bUpdatedAt = getSortableUpdatedAt(getRowRecords(b));
+        if (aUpdatedAt === null) return bUpdatedAt === null ? 0 : 1;
+        if (bUpdatedAt === null) return -1;
+        return sort === 'updated-asc'
+          ? aUpdatedAt - bUpdatedAt
+          : bUpdatedAt - aUpdatedAt;
+      });
 
     default:
       return sorted;

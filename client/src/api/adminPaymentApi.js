@@ -91,8 +91,8 @@ async function request(user, path, options = {}) {
   return handleResponse(response);
 }
 
-export async function fetchAdminPayments(user) {
-  const result = await request(user, '/api/admin/payments');
+export async function fetchAdminPayments(user, { signal } = {}) {
+  const result = await request(user, '/api/admin/payments', { signal });
 
   if (!Array.isArray(result)) {
     throw new AdminPaymentsApiError(

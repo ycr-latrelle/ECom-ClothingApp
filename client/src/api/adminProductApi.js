@@ -43,13 +43,14 @@ async function handleResponse(response) {
   return result;
 }
 
-export async function fetchAdminProducts(user) {
+export async function fetchAdminProducts(user, { signal } = {}) {
   const headers = await getAuthHeaders(user);
 
   const response = await fetch(ADMIN_PRODUCTS_URL, {
     method: "GET",
     headers,
     cache: "no-store",
+    signal,
   });
 
   const products = await handleResponse(response);

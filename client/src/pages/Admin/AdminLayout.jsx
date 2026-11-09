@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
 import '../../styles/admin-theme.css';
@@ -44,6 +44,17 @@ export default function AdminLayout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -96,7 +107,7 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        <div className="admin-sidebar-content">
+        <div className="admin-sidebar-content" id="admin-navigation">
           {navigation.map((group) => (
             <div className="admin-nav-group" key={group.section}>
               <p className="admin-nav-heading">{group.section}</p>
@@ -147,6 +158,8 @@ export default function AdminLayout() {
             type="button"
             className="admin-menu-button"
             onClick={() => setSidebarOpen(true)}
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-navigation"
             aria-label="Open navigation"
           >
             ☰

@@ -200,7 +200,7 @@
 }
 
 /* Table */
-.admin-payments .ap-table-wrap {
+.admin-payments .admin-data-table-wrap {
   max-width: 100%;
   overflow-x: auto;
 }
@@ -569,32 +569,12 @@
   opacity: .5;
 }
 
-/* Modal */
-
-.apm-modal-backdrop {
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow-y: auto;
-  padding: 24px;
-  background: rgb(13 24 32 / 55%);
-}
-
 .apm-modal {
-  display: flex;
-  flex-direction: column;
   width: min(100%, 680px);
   max-height: min(90vh, 900px);
-  overflow: hidden;
-  border: 1px solid var(--apm-line);
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 20px 70px rgb(0 0 0 / 20%);
 }
 
-.apm-modal-header {
+.apm-modal .ap-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -603,19 +583,19 @@
   border-bottom: 1px solid var(--apm-line);
 }
 
-.apm-modal-header h2 {
+.apm-modal .ap-modal-header h2 {
   margin: 5px 0;
   color: var(--apm-ink);
   font-size: 19px;
 }
 
-.apm-modal-header p:last-child {
+.apm-modal .ap-modal-header p:last-child:not(.eyebrow) {
   margin: 0;
   color: var(--apm-muted);
   font-size: 10px;
 }
 
-.apm-modal-close {
+.apm-modal .ap-modal-close {
   display: grid;
   flex-shrink: 0;
   width: 34px;
@@ -629,14 +609,12 @@
   cursor: pointer;
 }
 
-.apm-modal-close:disabled {
+.apm-modal .ap-modal-close:disabled {
   opacity: .5;
   cursor: not-allowed;
 }
 
-.apm-modal-content {
-  min-height: 0;
-  overflow-y: auto;
+.apm-modal .ap-modal-content {
   padding: 22px 24px;
 }
 
@@ -762,7 +740,7 @@
 
 /* Review actions */
 
-.apm-modal-footer,
+.apm-modal .ap-modal-footer,
 .apm-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -867,7 +845,7 @@
 /* Mobile modal */
 
 @media (max-width: 600px) {
-  .apm-modal-backdrop {
+  .apm-payment-modal-backdrop {
     align-items: end;
     padding: 0;
   }
@@ -878,19 +856,19 @@
     border-radius: 8px 8px 0 0;
   }
 
-  .apm-modal-header {
+  .apm-modal .ap-modal-header {
     padding: 17px;
   }
 
-  .apm-modal-content {
+  .apm-modal .ap-modal-content {
     padding: 17px;
   }
 
-  .apm-modal-footer {
+  .apm-modal .ap-modal-footer {
     padding: 13px 17px;
   }
 
-  .apm-modal-footer button {
+  .apm-modal .ap-modal-footer button {
     flex: 1 1 auto;
   }
 

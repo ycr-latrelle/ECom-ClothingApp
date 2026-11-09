@@ -251,6 +251,11 @@
   }
 
   .shop-filters button { flex: 0 0 auto; }
+
+  .shop-filters button,
+  .shop-sort select {
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

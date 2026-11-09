@@ -201,7 +201,7 @@
 }
 
 /* ---------- Shipment table ---------- */
-.admin-shipments .ap-table-wrap {
+.admin-shipments .admin-data-table-wrap {
   max-width: 100%;
   overflow-x: auto;
 }
@@ -637,17 +637,11 @@
 }
 
 .ash-modal {
-  width: min(760px, calc(100vw - 32px));
   max-width: 760px;
   max-height: min(88vh, 900px);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .ash-detail-content {
-  min-height: 0;
-  overflow-y: auto;
   padding: 20px 24px;
 }
 

@@ -7,6 +7,8 @@ import {
   verifyAdminPayment,
   rejectAdminPayment,
 } from '../../api/adminPaymentApi.js';
+import AdminDataTable from '../../components/Admin/AdminDataTable.jsx';
+import AdminModal from '../../components/Admin/AdminModal.jsx';
 import './AdminPayments.css';
 
 const PAGE_SIZE = 8;
@@ -200,6 +202,47 @@ export default function AdminPayments() {
   const pagePayments = filteredPayments.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
+  );
+  const paymentColumns = [
+    { key: 'order', label: 'Order' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'method', label: 'Payment method' },
+    { key: 'reference', label: 'Reference number' },
+    { key: 'amount', label: 'Amount' },
+    { key: 'submitted', label: 'Submitted' },
+    { key: 'status', label: 'Status' },
+    { key: 'action', label: 'Action' },
+  ];
+
+  const renderPaymentRow = (payment) => (
+    <>
+      <td><strong className="apm-order-code">{payment.orderCode || '—'}</strong></td>
+      <td>
+        <div className="apm-customer">
+          <strong>{payment.customerName || 'Unknown customer'}</strong>
+          <small>{payment.customerEmail || '—'}</small>
+        </div>
+      </td>
+      <td>
+        <div className="apm-method-cell">
+          <strong>{label(payment.paymentMethod)}</strong>
+          {payment.sourceProvider && <small>{label(payment.sourceProvider)}</small>}
+        </div>
+      </td>
+      <td><span className="apm-reference">{payment.referenceNumber || '—'}</span></td>
+      <td><strong className="apm-amount">{money(payment.amount)}</strong></td>
+      <td>{dateTime(payment.submittedAt)}</td>
+      <td><PaymentStatusBadge value={payment.status} /></td>
+      <td>
+        <button
+          type="button"
+          className="apm-view-button"
+          onClick={() => openDetails(payment)}
+        >
+          View details
+        </button>
+      </td>
+    </>
   );
 
   function updateFilter(setter, value) {
@@ -507,73 +550,13 @@ export default function AdminPayments() {
           </div>
         ) : (
           <>
-            <div className="ap-table-wrap">
-              <table className="ap-product-table apm-table">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Payment method</th>
-                    <th>Reference number</th>
-                    <th>Amount</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pagePayments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>
-                        <strong className="apm-order-code">
-                          {payment.orderCode || '—'}
-                        </strong>
-                      </td>
-                      <td>
-                        <div className="apm-customer">
-                          <strong>
-                            {payment.customerName || 'Unknown customer'}
-                          </strong>
-                          <small>{payment.customerEmail || '—'}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="apm-method-cell">
-                          <strong>{label(payment.paymentMethod)}</strong>
-                          {payment.sourceProvider && (
-                            <small>{label(payment.sourceProvider)}</small>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="apm-reference">
-                          {payment.referenceNumber || '—'}
-                        </span>
-                      </td>
-                      <td>
-                        <strong className="apm-amount">
-                          {money(payment.amount)}
-                        </strong>
-                      </td>
-                      <td>{dateTime(payment.submittedAt)}</td>
-                      <td>
-                        <PaymentStatusBadge value={payment.status} />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="apm-view-button"
-                          onClick={() => openDetails(payment)}
-                        >
-                          View details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminDataTable
+              tableClassName="apm-table"
+              columns={paymentColumns}
+              data={pagePayments}
+              getRowKey={(payment) => payment.id}
+              renderRow={renderPaymentRow}
+            />
 
             <div className="ap-pagination">
               <span>
@@ -660,59 +643,55 @@ function PaymentDetails({
   onCancelReject,
   onClose,
 }) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === 'Escape' && actionStatus !== 'loading') {
-        onClose();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, actionStatus]);
-
   const isPending = payment.status === 'pending_verification';
 
   return (
-    <div
-      className="apm-modal-backdrop"
-      onMouseDown={(event) => {
-        if (
-          event.target === event.currentTarget &&
-          actionStatus !== 'loading'
-        ) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        className="apm-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="apm-detail-title"
-      >
-        <header className="apm-modal-header">
-          <div>
-            <p className="eyebrow">PAYMENT REVIEW</p>
-            <h2 id="apm-detail-title">
-              {payment.orderCode || 'Payment details'}
-            </h2>
-            <p>Submitted {dateTime(payment.submittedAt)}</p>
-          </div>
-
+    <AdminModal
+      isOpen
+      onClose={onClose}
+      eyebrow="PAYMENT REVIEW"
+      title={payment.orderCode || 'Payment details'}
+      subtitle={`Submitted ${dateTime(payment.submittedAt)}`}
+      size="md"
+      dialogClassName="apm-modal"
+      backdropClassName="apm-payment-modal-backdrop"
+      isBusy={actionStatus === 'loading'}
+      footer={!rejectMode && (
+        <>
           <button
             type="button"
-            className="apm-modal-close"
+            className="apm-cancel-button"
             onClick={onClose}
             disabled={actionStatus === 'loading'}
-            aria-label="Close payment details"
           >
-            ×
+            Close
           </button>
-        </header>
 
-        <div className="apm-modal-content">
+          {isPending && (
+            <>
+              <button
+                type="button"
+                className="apm-reject-button"
+                onClick={onStartReject}
+                disabled={actionStatus === 'loading'}
+              >
+                Reject payment
+              </button>
+              <button
+                type="button"
+                className="apm-verify-button"
+                onClick={onVerify}
+                disabled={actionStatus === 'loading'}
+              >
+                {actionStatus === 'loading'
+                  ? 'Processing...'
+                  : 'Verify payment'}
+              </button>
+            </>
+          )}
+        </>
+      )}
+    >
           <section className="apm-detail-section">
             <div className="apm-detail-status">
               <span>Verification status</span>
@@ -859,44 +838,6 @@ function PaymentDetails({
               </div>
             </form>
           )}
-        </div>
-
-        {!rejectMode && (
-          <footer className="apm-modal-footer">
-            <button
-              type="button"
-              className="apm-cancel-button"
-              onClick={onClose}
-              disabled={actionStatus === 'loading'}
-            >
-              Close
-            </button>
-
-            {isPending && (
-              <>
-                <button
-                  type="button"
-                  className="apm-reject-button"
-                  onClick={onStartReject}
-                  disabled={actionStatus === 'loading'}
-                >
-                  Reject payment
-                </button>
-                <button
-                  type="button"
-                  className="apm-verify-button"
-                  onClick={onVerify}
-                  disabled={actionStatus === 'loading'}
-                >
-                  {actionStatus === 'loading'
-                    ? 'Processing...'
-                    : 'Verify payment'}
-                </button>
-              </>
-            )}
-          </footer>
-        )}
-      </section>
-    </div>
+    </AdminModal>
   );
 }

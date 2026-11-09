@@ -20,6 +20,8 @@ import {
   isProductActive,
   sortInventoryRows,
 } from '../../utils/inventory.js';
+import AdminDataTable from '../../components/Admin/AdminDataTable.jsx';
+import AdminModal from '../../components/Admin/AdminModal.jsx';
 import './AdminProducts.css';
 import './AdminInventory.css';
 
@@ -241,6 +243,56 @@ export default function AdminInventory() {
     inventoryStatus !== 'all';
 
   const inventoryReady = inventory.status === 'ready';
+  const inventoryColumns = [
+    { key: 'product', label: 'Product' },
+    { key: 'variants', label: 'Variants' },
+    { key: 'available', label: 'Available units' },
+    { key: 'inventoryStatus', label: 'Inventory status' },
+    { key: 'productStatus', label: 'Product status' },
+    { key: 'actions', label: 'Actions' },
+  ];
+
+  const renderInventoryRow = ({ product, records }) => (
+    <>
+      <td>
+        <button
+          type="button"
+          className="ap-product-identity"
+          onClick={() => setSelectedProduct(product)}
+        >
+          <span className="ap-product-thumb">
+            <ProductImage
+              src={getProductImage(product)}
+              alt=""
+              loading="lazy"
+            />
+          </span>
+          <span className="ap-product-name">
+            <strong>{product.name}</strong>
+            <small>{product.category || 'Uncategorized'}</small>
+          </span>
+        </button>
+      </td>
+      <td>{records.length}</td>
+      <td>
+        <strong className="ai-stock">
+          {numberFormat.format(getProductStockTotal(records))}
+        </strong>
+      </td>
+      <td><ProductInventoryStatus records={records} /></td>
+      <td><ProductStatus product={product} /></td>
+      <td>
+        <div className="ap-row-actions ai-actions">
+          <button type="button" onClick={() => setSelectedProduct(product)}>
+            View
+          </button>
+          <button type="button" onClick={() => setAdjustingProduct(product)}>
+            Adjust stock
+          </button>
+        </div>
+      </td>
+    </>
+  );
 
   return (
     <section className="admin-products admin-inventory">
@@ -470,73 +522,14 @@ export default function AdminInventory() {
           </div>
         ) : (
           <>
-            <div className="ap-table-wrap">
-              <table className="ap-product-table ai-inventory-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Variants</th>
-                    <th>Available units</th>
-                    <th>Inventory status</th>
-                    <th>Product status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageRows.map(({ product, records }) => (
-                    <tr key={product.id}>
-                      <td>
-                        <button
-                          type="button"
-                          className="ap-product-identity"
-                          onClick={() => setSelectedProduct(product)}
-                        >
-                          <span className="ap-product-thumb">
-                            <ProductImage
-                              src={getProductImage(product)}
-                              alt=""
-                              loading="lazy"
-                            />
-                          </span>
-                          <span className="ap-product-name">
-                            <strong>{product.name}</strong>
-                            <small>{product.category || 'Uncategorized'}</small>
-                          </span>
-                        </button>
-                      </td>
-                      <td>{records.length}</td>
-                      <td>
-                        <strong className="ai-stock">
-                          {numberFormat.format(getProductStockTotal(records))}
-                        </strong>
-                      </td>
-                      <td>
-                        <ProductInventoryStatus records={records} />
-                      </td>
-                      <td>
-                        <ProductStatus product={product} />
-                      </td>
-                      <td>
-                        <div className="ap-row-actions ai-actions">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedProduct(product)}
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAdjustingProduct(product)}
-                          >
-                            Adjust stock
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminDataTable
+              className="ai-desktop-table"
+              tableClassName="ai-inventory-table"
+              columns={inventoryColumns}
+              data={pageRows}
+              getRowKey={(row) => row.product.id}
+              renderRow={renderInventoryRow}
+            />
 
             <div className="ap-mobile-list">
               {pageRows.map(({ product, records }) => (
@@ -709,40 +702,29 @@ function ProductStatus({ product }) {
 }
 
 function InventoryDetails({ product, records, onClose, onAdjust }) {
-  useModalEscape(onClose);
-
   return (
-    <div
-      className="ap-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        className="ap-modal ap-product-detail ai-variant-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-detail-title"
-      >
-        <div className="ap-modal-header">
-          <div>
-            <p className="eyebrow">INVENTORY DETAILS</p>
-            <h2 id="ai-detail-title">{product.name}</h2>
-          </div>
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ×
+    <AdminModal
+      isOpen
+      onClose={onClose}
+      eyebrow="INVENTORY DETAILS"
+      title={product.name}
+      subtitle={product.category || 'Uncategorized'}
+      size="lg"
+      dialogClassName="ai-variant-modal"
+      footer={
+        <>
+          <button type="button" className="ap-secondary-button" onClick={onClose}>
+            Close
           </button>
-        </div>
-
+          <button type="button" className="ap-primary-button" onClick={onAdjust}>
+            Adjust stock
+          </button>
+        </>
+      }
+    >
         <div className="ai-detail-product">
           <ProductImage src={getProductImage(product)} alt={product.name} />
           <div>
-            <span>{product.category || 'Uncategorized'}</span>
             <strong>{numberFormat.format(getProductStockTotal(records))} available units</strong>
             <small>{records.length} color-size variants</small>
           </div>
@@ -778,17 +760,7 @@ function InventoryDetails({ product, records, onClose, onAdjust }) {
             </tbody>
           </table>
         </div>
-
-        <div className="ap-modal-footer">
-          <button type="button" className="ap-secondary-button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" className="ap-primary-button" onClick={onAdjust}>
-            Adjust stock
-          </button>
-        </div>
-      </section>
-    </div>
+    </AdminModal>
   );
 }
 
@@ -799,10 +771,6 @@ function StockAdjustmentModal({ product, records, user, onClose, onSaved, onErro
   const [threshold, setThreshold] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  useModalEscape(() => {
-    if (!saving) onClose();
-  });
 
   const colors = Array.isArray(product.colors) ? product.colors : [];
   const sizes = Array.isArray(product.sizes) ? product.sizes : [];
@@ -875,36 +843,41 @@ function StockAdjustmentModal({ product, records, user, onClose, onSaved, onErro
   const selectedColorSizeExists = Boolean(selectedRecord);
 
   return (
-    <div
-      className="ap-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onClose();
-      }}
-    >
-      <section
-        className="ap-modal ap-form-modal ai-stock-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-stock-title"
-      >
-        <div className="ap-modal-header">
-          <div>
-            <p className="eyebrow">INVENTORY MANAGEMENT</p>
-            <h2 id="ai-stock-title">Adjust stock</h2>
-            <p>{product.name}</p>
-          </div>
+    <AdminModal
+      isOpen
+      onClose={onClose}
+      eyebrow="INVENTORY MANAGEMENT"
+      title="Adjust stock"
+      subtitle={product.name}
+      size="md"
+      dialogClassName="ai-stock-modal"
+      isBusy={saving}
+      footer={
+        <>
           <button
             type="button"
-            className="ap-modal-close"
+            className="ap-secondary-button"
             onClick={onClose}
             disabled={saving}
-            aria-label="Close"
           >
-            ×
+            Cancel
           </button>
-        </div>
-
-        <form className="ap-product-form" onSubmit={handleSubmit}>
+          <button
+            type="submit"
+            form="inventory-stock-form"
+            className="ap-primary-button"
+            disabled={saving || !colors.length || !sizes.length}
+          >
+            {saving ? 'Saving...' : 'Save stock'}
+          </button>
+        </>
+      }
+    >
+        <form
+          id="inventory-stock-form"
+          className="ap-product-form"
+          onSubmit={handleSubmit}
+        >
           <label>
             Color *
             <select
@@ -985,42 +958,7 @@ function StockAdjustmentModal({ product, records, user, onClose, onSaved, onErro
             </p>
           )}
 
-          <div className="ap-modal-footer ap-form-full">
-            <button
-              type="button"
-              className="ap-secondary-button"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="ap-primary-button"
-              disabled={saving || !colors.length || !sizes.length}
-            >
-              {saving ? 'Saving...' : 'Save stock'}
-            </button>
-          </div>
         </form>
-      </section>
-    </div>
+    </AdminModal>
   );
-}
-
-function useModalEscape(onClose) {
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose();
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
 }

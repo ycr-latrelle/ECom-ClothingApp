@@ -7,6 +7,8 @@ import {
   updateAdminShipment,
   updateAdminShippingFee,
 } from '../../api/adminShipmentApi.js';
+import AdminDataTable from '../../components/Admin/AdminDataTable.jsx';
+import AdminModal from '../../components/Admin/AdminModal.jsx';
 import './AdminProducts.css';
 import './AdminShipments.css';
 
@@ -185,6 +187,53 @@ export default function AdminShipments() {
   const pageShipments = filteredShipments.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
+  );
+  const shipmentColumns = [
+    { key: 'order', label: 'Order' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'courier', label: 'Courier' },
+    { key: 'tracking', label: 'Tracking number' },
+    { key: 'fee', label: 'Shipping fee' },
+    { key: 'updated', label: 'Last updated' },
+    { key: 'status', label: 'Status' },
+    { key: 'action', label: 'Action' },
+  ];
+
+  const renderShipmentRow = (shipment) => (
+    <>
+      <td><strong className="ash-order-code">{shipment.orderCode}</strong></td>
+      <td>
+        <div className="ash-customer">
+          <strong>{shipment.customerName}</strong>
+          <small>{shipment.customerEmail}</small>
+        </div>
+      </td>
+      <td>{shipment.courier ? courierLabel(shipment.courier) : 'Not assigned'}</td>
+      <td>
+        <span className="ash-tracking-number">
+          {shipment.trackingNumber || 'Not assigned'}
+        </span>
+      </td>
+      <td>
+        <strong className="ash-shipping-fee">
+          {shipment.shippingFee == null
+            ? 'To be confirmed'
+            : money(shipment.shippingFee)}
+        </strong>
+        <small className="ash-fee-status">{label(shipment.shippingFeeStatus)}</small>
+      </td>
+      <td>{dateTime(shipment.updatedAt || shipment.createdAt)}</td>
+      <td><ShipmentStatusBadge value={shipment.shipmentStatus} /></td>
+      <td>
+        <button
+          type="button"
+          className="ash-view-button"
+          onClick={() => setSelectedOrderId(shipment.orderId)}
+        >
+          View details
+        </button>
+      </td>
+    </>
   );
 
   function updateFilter(setter, value) {
@@ -368,69 +417,13 @@ export default function AdminShipments() {
           </div>
         ) : (
           <>
-            <div className="ap-table-wrap">
-              <table className="ap-product-table ash-table">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Courier</th>
-                    <th>Tracking number</th>
-                    <th>Shipping fee</th>
-                    <th>Last updated</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pageShipments.map((shipment) => (
-                    <tr key={shipment.orderId}>
-                      <td>
-                        <strong className="ash-order-code">
-                          {shipment.orderCode}
-                        </strong>
-                      </td>
-                      <td>
-                        <div className="ash-customer">
-                          <strong>{shipment.customerName}</strong>
-                          <small>{shipment.customerEmail}</small>
-                        </div>
-                      </td>
-                      <td>{shipment.courier ? courierLabel(shipment.courier) : 'Not assigned'}</td>
-                      <td>
-                        <span className="ash-tracking-number">
-                          {shipment.trackingNumber || 'Not assigned'}
-                        </span>
-                      </td>
-                      <td>
-                        <strong className="ash-shipping-fee">
-                          {shipment.shippingFee == null
-                            ? 'To be confirmed'
-                            : money(shipment.shippingFee)}
-                        </strong>
-                        <small className="ash-fee-status">
-                          {label(shipment.shippingFeeStatus)}
-                        </small>
-                      </td>
-                      <td>{dateTime(shipment.updatedAt || shipment.createdAt)}</td>
-                      <td>
-                        <ShipmentStatusBadge value={shipment.shipmentStatus} />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="ash-view-button"
-                          onClick={() => setSelectedOrderId(shipment.orderId)}
-                        >
-                          View details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminDataTable
+              tableClassName="ash-table"
+              columns={shipmentColumns}
+              data={pageShipments}
+              getRowKey={(shipment) => shipment.orderId}
+              renderRow={renderShipmentRow}
+            />
 
             <div className="ap-pagination">
               <span>
@@ -527,15 +520,6 @@ function ShipmentDetails({ user, orderId, onClose, onSaved }) {
     };
   }, [user, orderId]);
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === 'Escape' && !saving) onClose();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, saving]);
-
   const address = shipment
     ? [
         shipment.streetAddress,
@@ -619,38 +603,27 @@ function ShipmentDetails({ user, orderId, onClose, onSaved }) {
   }
 
   return (
-    <div
-      className="ap-modal-backdrop ash-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onClose();
-      }}
+    <AdminModal
+      isOpen
+      onClose={onClose}
+      eyebrow="SHIPMENT MANAGEMENT"
+      title={shipment?.orderCode || 'Shipment details'}
+      subtitle="Review delivery information and manage shipment details."
+      size="lg"
+      dialogClassName="ash-modal"
+      backdropClassName="ash-backdrop"
+      isBusy={saving}
+      footer={
+        <button
+          type="button"
+          className="ap-secondary-button"
+          onClick={onClose}
+          disabled={saving}
+        >
+          Close
+        </button>
+      }
     >
-      <section
-        className="ap-modal ash-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ash-detail-title"
-      >
-        <header className="ap-modal-header">
-          <div>
-            <p className="eyebrow">SHIPMENT MANAGEMENT</p>
-            <h2 id="ash-detail-title">
-              {shipment?.orderCode || 'Shipment details'}
-            </h2>
-            <p>Review delivery information and manage shipment details.</p>
-          </div>
-
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            disabled={saving}
-            aria-label="Close shipment details"
-          >
-            ×
-          </button>
-        </header>
-
         <div className="ash-detail-content">
           {loading ? (
             <div className="ap-state">
@@ -834,17 +807,6 @@ function ShipmentDetails({ user, orderId, onClose, onSaved }) {
           )}
         </div>
 
-        <footer className="ap-modal-footer">
-          <button
-            type="button"
-            className="ap-secondary-button"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Close
-          </button>
-        </footer>
-      </section>
-    </div>
+    </AdminModal>
   );
 }

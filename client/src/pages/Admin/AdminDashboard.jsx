@@ -1,33 +1,12 @@
-
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchInventorySummary } from '../../api/inventoryApi.js';
+import { fetchAdminOrders } from '../../api/adminOrderApi.js';
+import { fetchAdminPayments } from '../../api/adminPaymentApi.js';
+import { fetchAdminProducts } from '../../api/adminProductApi.js';
+import { useAuth } from '../../context/useAuth.js';
+import { getDashboardMetrics } from '../../utils/adminDashboard.js';
 import './AdminDashboard.css';
-
-const metrics = [
-  {
-    label: 'Total Revenue',
-    value: '—',
-    description: 'Awaiting sales data',
-    icon: '₱',
-  },
-  {
-    label: 'Total Orders',
-    value: '—',
-    description: 'Awaiting order data',
-    icon: '▤',
-  },
-  {
-    label: 'Products',
-    value: '—',
-    description: 'Awaiting catalog data',
-    icon: '◇',
-  },
-  {
-    label: 'Pending Payments',
-    value: '—',
-    description: 'Awaiting payment data',
-    icon: '₱',
-  },
-];
 
 const shortcuts = [
   {
@@ -57,6 +36,83 @@ const shortcuts = [
 ];
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const [reloadKey, setReloadKey] = useState(0);
+  const [dashboard, setDashboard] = useState({
+    status: 'loading',
+    metrics: [],
+    error: '',
+    updatedAt: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    Promise.resolve()
+      .then(() => {
+        if (!user) throw new Error('Sign in with an authorized admin account to load dashboard data.');
+
+        return Promise.allSettled([
+          fetchAdminProducts(user, { signal: controller.signal }),
+          fetchAdminOrders(user, { signal: controller.signal }),
+          fetchAdminPayments(user, { signal: controller.signal }),
+          fetchInventorySummary(user, { signal: controller.signal }),
+        ]);
+      })
+      .then((results) => {
+        if (cancelled) return;
+
+        const resourceErrors = [];
+        const [productsResult, ordersResult, paymentsResult, inventoryResult] = results;
+        const getData = (result, resource, fallback) => {
+          if (result.status === 'fulfilled') return result.value;
+          resourceErrors.push(resource);
+          return fallback;
+        };
+        const products = getData(productsResult, 'products', null);
+        const orders = getData(ordersResult, 'orders', null);
+        const payments = getData(paymentsResult, 'payments', null);
+        const inventory = getData(inventoryResult, 'inventory', null);
+        const hasLoadedData = results.some(
+          (result) => result.status === 'fulfilled',
+        );
+
+        setDashboard({
+          status: !hasLoadedData
+            ? 'error'
+            : resourceErrors.length
+              ? 'partial'
+              : 'ready',
+          metrics: getDashboardMetrics(products, orders, payments, inventory),
+          error: resourceErrors.length
+            ? `Some data could not be loaded: ${resourceErrors.join(', ')}.`
+            : '',
+          updatedAt: new Date(),
+        });
+      })
+      .catch((error) => {
+        if (cancelled || error?.name === 'AbortError') return;
+
+        setDashboard({
+          status: 'error',
+          metrics: [],
+          error: error.message || 'Dashboard data could not be loaded.',
+          updatedAt: null,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [user, reloadKey]);
+
+  const refresh = useCallback(() => {
+    setDashboard((current) => ({ ...current, status: 'loading', error: '' }));
+    setReloadKey((current) => current + 1);
+  }, []);
+
   return (
     <div className="admin-dashboard">
       <div className="admin-page-heading">
@@ -64,23 +120,78 @@ export default function AdminDashboard() {
           <p className="eyebrow">STORE MANAGEMENT</p>
           <h1>Overview</h1>
           <p className="admin-page-description">
-            Welcome to your Thread / Theory administration workspace.
+            A live summary of products, orders, payments, and inventory.
           </p>
         </div>
 
-        <span className="admin-date-label">Dashboard preview</span>
+        <div className="admin-dashboard-heading-actions">
+          {dashboard.updatedAt && (
+            <span className="admin-date-label">
+              Updated {new Intl.DateTimeFormat('en-PH', {
+                hour: 'numeric',
+                minute: '2-digit',
+              }).format(dashboard.updatedAt)}
+            </span>
+          )}
+          <button
+            type="button"
+            className="admin-dashboard-refresh"
+            onClick={refresh}
+            disabled={dashboard.status === 'loading'}
+          >
+            {dashboard.status === 'loading' ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
-      <section className="admin-metrics-grid" aria-label="Store metrics">
-        {metrics.map((metric) => (
+      {(dashboard.status === 'error' || dashboard.status === 'partial') && (
+        <div className="admin-dashboard-error" role="alert">
+          <p>
+            <strong>
+              {dashboard.status === 'partial'
+                ? 'Some dashboard data is unavailable.'
+                : 'Dashboard data is unavailable.'}
+            </strong>{' '}
+            {dashboard.error}
+          </p>
+          <button type="button" onClick={refresh}>Try again</button>
+        </div>
+      )}
+
+      <section
+        className="admin-metrics-grid"
+        aria-label="Store metrics"
+        aria-busy={dashboard.status === 'loading'}
+      >
+        {(dashboard.status === 'ready' || dashboard.status === 'partial'
+          ? dashboard.metrics
+          : [
+              { label: 'Products', icon: '◇' },
+              { label: 'Total orders', icon: '▤' },
+              { label: 'Pending orders', icon: '◷' },
+              { label: 'Payment submissions', icon: '₱' },
+              { label: 'Verified payments', icon: '✓' },
+              { label: 'Low-stock products', icon: '!' },
+            ]
+        ).map((metric) => (
           <article className="admin-metric-card" key={metric.label}>
             <div className="admin-metric-top">
               <span>{metric.label}</span>
-              <span className="admin-metric-icon">{metric.icon}</span>
+              <span className="admin-metric-icon" aria-hidden="true">{metric.icon}</span>
             </div>
 
-            <strong className="admin-metric-value">{metric.value}</strong>
-            <p>{metric.description}</p>
+            <strong className="admin-metric-value">
+              {dashboard.status === 'ready' || dashboard.status === 'partial'
+                ? metric.value
+                : '—'}
+            </strong>
+            <p>
+              {dashboard.status === 'loading'
+                ? 'Loading live data…'
+                : dashboard.status === 'error'
+                  ? 'Data unavailable'
+                  : metric.description}
+            </p>
           </article>
         ))}
       </section>
@@ -100,54 +211,16 @@ export default function AdminDashboard() {
               className="admin-shortcut-card"
               key={shortcut.path}
             >
-              <span className="admin-shortcut-icon">{shortcut.icon}</span>
+              <span className="admin-shortcut-icon" aria-hidden="true">{shortcut.icon}</span>
 
               <div>
                 <h3>{shortcut.title}</h3>
                 <p>{shortcut.description}</p>
               </div>
 
-              <span className="admin-shortcut-arrow">↗</span>
+              <span className="admin-shortcut-arrow" aria-hidden="true">↗</span>
             </Link>
           ))}
-        </div>
-      </section>
-
-      <section className="admin-dashboard-section">
-        <div className="admin-section-heading">
-          <div>
-            <h2>System status</h2>
-            <p>Dashboard integration progress.</p>
-          </div>
-        </div>
-
-        <div className="admin-status-panel">
-          <div className="admin-status-row">
-            <span className="admin-status-dot connected" />
-            <div>
-              <strong>Dashboard interface</strong>
-              <p>Initial frontend layout is available.</p>
-            </div>
-            <span className="admin-status-label">Available</span>
-          </div>
-
-          <div className="admin-status-row">
-            <span className="admin-status-dot pending" />
-            <div>
-              <strong>Database-backed authorization</strong>
-              <p>Owner, Admin, and Seller permissions are not connected.</p>
-            </div>
-            <span className="admin-status-label pending-text">Pending</span>
-          </div>
-
-          <div className="admin-status-row">
-            <span className="admin-status-dot pending" />
-            <div>
-              <strong>Dashboard analytics</strong>
-              <p>Real sales and order statistics are not connected.</p>
-            </div>
-            <span className="admin-status-label pending-text">Pending</span>
-          </div>
         </div>
       </section>
     </div>

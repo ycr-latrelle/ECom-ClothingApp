@@ -136,3 +136,9 @@
 @media (max-width: 800px) {
   .featured-article { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 640px) {
+  .journal-filters button {
+    min-height: 44px;
+  }
+}

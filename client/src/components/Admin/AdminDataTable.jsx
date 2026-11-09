@@ -1,20 +1,28 @@
+import "./AdminDataTable.css";
+
 export default function AdminDataTable({
-  columns,
-  data,
+  columns = [],
+  data = [],
   renderRow,
+  getRowKey,
+  className = "",
+  tableClassName = "",
   loadingState,
   errorState,
-  emptyState,
+  emptyState = "No records found.",
 }) {
   const columnCount = columns.length;
 
   return (
-    <div className="ap-table-wrap">
-      <table className="ap-product-table">
+    <div className={`admin-data-table-wrap ${className}`.trim()}>
+      <table
+        className={`admin-data-table ${tableClassName}`.trim()}
+        aria-busy={Boolean(loadingState)}
+      >
         <thead>
           <tr>
             {columns.map((column) => (
-              <th className={column.className} key={column.label} scope="col">
+              <th className={column.className} key={column.key ?? column.label} scope="col">
                 {column.label}
               </th>
             ))}
@@ -27,15 +35,29 @@ export default function AdminDataTable({
             </tr>
           ) : errorState ? (
             <tr>
-              <td colSpan={columnCount} role="alert">{errorState}</td>
+              <td colSpan={columnCount} role="alert" className="admin-data-table-state admin-data-table-error">
+                {errorState}
+              </td>
             </tr>
           ) : data.length ? (
             data.map((item, index) => (
-              <tr key={item.id ?? index}>{renderRow(item)}</tr>
+              <tr key={getRowKey?.(item) ?? item?.id ?? index}>
+                {renderRow
+                  ? renderRow(item)
+                  : columns.map((column) => (
+                      <td className={column.className} key={column.key ?? column.label}>
+                        {column.renderCell
+                          ? column.renderCell(item)
+                          : item?.[column.key]}
+                      </td>
+                    ))}
+              </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={columnCount}>{emptyState}</td>
+              <td colSpan={columnCount} className="admin-data-table-state">
+                {emptyState}
+              </td>
             </tr>
           )}
         </tbody>

@@ -96,19 +96,20 @@
   .site-header {
     grid-template-columns: 1fr auto;
     gap: 10px;
-    padding-top: 12px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
   }
 
   .site-nav {
     grid-column: 1 / -1;
     grid-row: 2;
-    height: 38px;
+    height: 44px;
     overflow-x: auto;
     gap: 22px;
   }
 
   .site-nav-link {
     flex: 0 0 auto;
+    min-height: 44px;
   }
 
   .site-nav-link.active::after {
@@ -118,7 +119,39 @@
   .site-header-actions {
     grid-column: 2;
     grid-row: 1;
-    gap: 12px;
+    gap: 8px;
+  }
+
+  .header-icon {
+    display: grid;
+    min-width: 40px;
+    min-height: 44px;
+    place-items: center;
+  }
+
+  .site-brand {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .site-header {
+    gap: 6px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .site-brand {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
+  .site-header-actions {
+    gap: 2px;
+  }
+
+  .header-icon {
+    min-width: 36px;
   }
 }
 
@@ -170,7 +203,7 @@ button.header-icon {
 
 @media (max-width: 680px) {
   :root {
-    --header-h: 122px;
+    --header-h: 128px;
   }
 }
 

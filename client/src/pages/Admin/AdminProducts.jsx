@@ -5,6 +5,7 @@ import {
   fetchAdminProducts,
   fetchAdminProductImages,
   createAdminProduct,
+  deleteAdminProduct,
   updateAdminProduct,
   setAdminProductStatus,
   uploadAdminProductImage,
@@ -115,6 +116,9 @@ export default function AdminProducts() {
   const [imageError, setImageError] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const [initialStocks, setInitialStocks] = useState({});
 
@@ -507,6 +511,36 @@ export default function AdminProducts() {
     }
   }
 
+  function requestProductDelete(product) {
+    setSelectedProduct(null);
+    setDeleteError("");
+    setProductToDelete(product);
+  }
+
+  async function confirmProductDelete() {
+    if (!productToDelete || deletingProduct) return;
+
+    setDeletingProduct(true);
+    setDeleteError("");
+
+    try {
+      const result = await deleteAdminProduct(user, productToDelete.id);
+      setProductToDelete(null);
+      setSelectedProduct(null);
+      await refreshProducts();
+      setPage(1);
+      setNotice(
+        result?.telegramCleanupPending
+          ? `“${productToDelete.name}” was deleted. Some associated image files still need cleanup.`
+          : `“${productToDelete.name}” was permanently deleted.`,
+      );
+    } catch (error) {
+      setDeleteError(error.message || "Could not delete the product.");
+    } finally {
+      setDeletingProduct(false);
+    }
+  }
+
   function clearNotice() {
     setNotice("");
   }
@@ -550,10 +584,18 @@ export default function AdminProducts() {
       </td>
       <td>
         <div className="ap-row-actions">
-          <button className="admin-btn admin-btn-ghost" onClick={() => setSelectedProduct(product)}>View</button>
-          <button className="admin-btn admin-btn-ghost" onClick={() => openEditForm(product)}>Edit</button>
-          <button className="admin-btn admin-btn-ghost" onClick={() => toggleActive(product)}>
+          <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setSelectedProduct(product)}>View</button>
+          <button type="button" className="admin-btn admin-btn-ghost" onClick={() => openEditForm(product)}>Edit</button>
+          <button type="button" className="admin-btn admin-btn-ghost" onClick={() => toggleActive(product)}>
             {getActive(product) ? "Deactivate" : "Activate"}
+          </button>
+          <button
+            type="button"
+            className="ap-row-delete"
+            onClick={() => requestProductDelete(product)}
+            aria-label={`Permanently delete ${product.name}`}
+          >
+            Delete
           </button>
         </div>
       </td>
@@ -627,6 +669,7 @@ export default function AdminProducts() {
         </div>
 
         <AdminDataTable
+          className="ap-product-table"
           columns={tableColumns}
           data={paginatedProducts}
           renderRow={renderProductRow}
@@ -659,8 +702,56 @@ export default function AdminProducts() {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onEdit={() => openEditForm(selectedProduct)}
+          onDelete={() => requestProductDelete(selectedProduct)}
           user={user}
         />
+      )}
+
+      {productToDelete && (
+        <AdminModal
+          isOpen
+          onClose={() => setProductToDelete(null)}
+          eyebrow="PERMANENT ACTION"
+          title="Delete product?"
+          subtitle="This action cannot be undone."
+          size="sm"
+          dialogClassName="ap-delete-modal"
+          isBusy={deletingProduct}
+          footer={
+            <>
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={() => setProductToDelete(null)}
+                disabled={deletingProduct}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="admin-btn ap-confirm-delete"
+                onClick={confirmProductDelete}
+                disabled={deletingProduct}
+              >
+                {deletingProduct ? "Deleting…" : "Permanently delete"}
+              </button>
+            </>
+          }
+        >
+          <div className="ap-delete-confirmation">
+            <p>
+              Permanently delete <strong>{productToDelete.name}</strong>,
+              its inventory, and its associated product images?
+            </p>
+            <p>
+              Products referenced by existing records, such as order history,
+              cannot be deleted.
+            </p>
+            {deleteError && (
+              <p className="ap-delete-error" role="alert">{deleteError}</p>
+            )}
+          </div>
+        </AdminModal>
       )}
 
       <ProductForm
@@ -689,7 +780,7 @@ export default function AdminProducts() {
   );
 }
 
-function ProductDetails({ product, onClose, onEdit, user }) {
+function ProductDetails({ product, onClose, onEdit, onDelete, user }) {
   const [images, setImages] = useState([]);
   const [imagesLoading, setImagesLoading] = useState(true);
 
@@ -722,8 +813,15 @@ function ProductDetails({ product, onClose, onEdit, user }) {
       size="md"
       footer={
         <>
-          <button className="admin-btn admin-btn-secondary" onClick={onClose}>Close</button>
-          <button className="admin-btn admin-btn-primary" onClick={onEdit}>Edit product</button>
+          <button
+            type="button"
+            className="admin-btn ap-detail-delete"
+            onClick={onDelete}
+          >
+            Delete product
+          </button>
+          <button type="button" className="admin-btn admin-btn-secondary" onClick={onClose}>Close</button>
+          <button type="button" className="admin-btn admin-btn-primary" onClick={onEdit}>Edit product</button>
         </>
       }
     >
@@ -799,19 +897,6 @@ function ProductForm({
 }) {
   const [dragging, setDragging] = useState(false);
   const [stockForAll, setStockForAll] = useState("");
-  useEffect(() => {
-    if (!open) return undefined;
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape" && !saving) onClose();
-    };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose, saving]);
 
   if (!open) return null;
 
@@ -826,16 +911,17 @@ function ProductForm({
       title={editing ? "Edit product" : "Add product"}
       subtitle={editing ? "Update the listing details and product photos." : "Add the product details, variants, current stock, and photos."}
       size="lg"
+      isBusy={saving}
       footer={
         <>
-          <button className="admin-btn admin-btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="admin-btn admin-btn-primary" onClick={onSubmit} disabled={saving}>
+          <button type="button" className="admin-btn admin-btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button type="submit" form="admin-product-form" className="admin-btn admin-btn-primary" disabled={saving}>
             {saving ? "Saving…" : editing ? "Save changes" : "Add product"}
           </button>
         </>
       }
     >
-      <form className="ap-product-form" onSubmit={onSubmit}>
+      <form id="admin-product-form" className="ap-product-form" onSubmit={onSubmit}>
         <section className="ap-form-section">
           <header className="ap-form-section-header">
             <span>01</span>

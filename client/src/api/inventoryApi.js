@@ -105,13 +105,14 @@ export async function fetchInventory(user) {
   return mapInventoryRecords(await handleResponse(response));
 }
 
-export async function fetchInventorySummary(user) {
+export async function fetchInventorySummary(user, { signal } = {}) {
   const headers = await getAuthHeaders(user);
 
   const response = await fetch(`${INVENTORY_URL}/summary`, {
     method: 'GET',
     headers,
     cache: 'no-store',
+    signal,
   });
 
   return mapInventorySummary(await handleResponse(response));
