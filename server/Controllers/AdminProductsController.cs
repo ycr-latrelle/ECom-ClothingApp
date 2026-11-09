@@ -1,7 +1,7 @@
 
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
 using Npgsql;
 using server.Api.Data;
 using server.Api.Models;
@@ -17,20 +17,17 @@ public sealed class AdminProductsController : ControllerBase
     private readonly ProductRepository _repository;
     private readonly ProductImageRepository _imageRepository;
     private readonly TelegramProductImageService _telegramService;
-    private readonly IOutputCacheStore _outputCacheStore;
     private readonly ILogger<AdminProductsController> _logger;
 
     public AdminProductsController(
         ProductRepository repository,
         ProductImageRepository imageRepository,
         TelegramProductImageService telegramService,
-        IOutputCacheStore outputCacheStore,
         ILogger<AdminProductsController> logger)
     {
         _repository = repository;
         _imageRepository = imageRepository;
         _telegramService = telegramService;
-        _outputCacheStore = outputCacheStore;
         _logger = logger;
     }
 
@@ -64,22 +61,41 @@ public sealed class AdminProductsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<AdminProductResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AdminProductResponse>> Create(
         [FromBody] ProductUpsertRequest request,
         CancellationToken cancellationToken)
     {
+        var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(firebaseUid))
+        {
+            return Unauthorized(new
+            {
+                error = "Unable to identify the authenticated administrator."
+            });
+        }
+
         try
         {
             var product = await _repository.CreateAsync(
                 request,
+                firebaseUid,
                 cancellationToken);
-
-            await InvalidatePublicProductsCacheAsync(cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetById),
                 new { id = product.Id },
                 product);
+        }
+        catch (InventoryValidationException exception)
+        {
+            return BadRequest(new
+            {
+                error = exception.Message
+            });
         }
         catch (PostgresException exception)
             when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
@@ -97,11 +113,22 @@ public sealed class AdminProductsController : ControllerBase
         [FromBody] ProductUpsertRequest request,
         CancellationToken cancellationToken)
     {
+        var firebaseUid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(firebaseUid))
+        {
+            return Unauthorized(new
+            {
+                error = "Unable to identify the authenticated administrator."
+            });
+        }
+
         try
         {
             var product = await _repository.UpdateAsync(
                 id,
                 request,
+                firebaseUid,
                 cancellationToken);
 
             if (product is null)
@@ -112,9 +139,14 @@ public sealed class AdminProductsController : ControllerBase
                 });
             }
 
-            await InvalidatePublicProductsCacheAsync(cancellationToken);
-
             return Ok(product);
+        }
+        catch (InventoryValidationException exception)
+        {
+            return BadRequest(new
+            {
+                error = exception.Message
+            });
         }
         catch (PostgresException exception)
             when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
@@ -144,8 +176,6 @@ public sealed class AdminProductsController : ControllerBase
                 error = "Product not found."
             });
         }
-
-        await InvalidatePublicProductsCacheAsync(cancellationToken);
 
         return NoContent();
     }
@@ -207,8 +237,6 @@ public sealed class AdminProductsController : ControllerBase
             }
         }
 
-        await InvalidatePublicProductsCacheAsync(cancellationToken);
-
         return Ok(new
         {
             message = failedCleanupCount == 0
@@ -219,11 +247,4 @@ public sealed class AdminProductsController : ControllerBase
         });
     }
 
-    private async Task InvalidatePublicProductsCacheAsync(
-        CancellationToken cancellationToken)
-    {
-        await _outputCacheStore.EvictByTagAsync(
-            "public-products",
-            cancellationToken);
-    }
 }

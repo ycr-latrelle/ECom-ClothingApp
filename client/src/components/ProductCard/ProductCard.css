@@ -148,3 +148,11 @@
   outline: 2px solid var(--color-navy);
   outline-offset: 2px;
 }
+
+.product-card-add:disabled,
+.product-card-checkout:disabled {
+  border-color: var(--color-line);
+  color: var(--color-gray);
+  background: rgba(23, 42, 57, 0.06);
+  cursor: not-allowed;
+}

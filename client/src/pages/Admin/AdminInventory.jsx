@@ -813,6 +813,7 @@ function StockAdjustmentModal({ product, records, user, onClose, onSaved, onErro
       (record.size || '') === size,
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!selectedRecord) {
       setStock('');
@@ -827,6 +828,7 @@ function StockAdjustmentModal({ product, records, user, onClose, onSaved, onErro
         : String(selectedRecord.lowStockThreshold),
     );
   }, [selectedRecord]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSubmit(event) {
     event.preventDefault();

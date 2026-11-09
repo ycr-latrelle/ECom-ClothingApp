@@ -1,4 +1,3 @@
-import React from 'react';
 import './AdminPageHeader.css';
 
 export default function AdminPageHeader({ eyebrow, title, description, action }) {

@@ -178,9 +178,10 @@ export default function OrderConfirmation() {
 
         <ul className="confirmation-items">
           {order.items.map((item) => (
-            <li key={`${item.id}-${item.size ?? 'one-size'}`}>
+            <li key={`${item.id}-${item.color ?? ''}-${item.size ?? 'one-size'}`}>
               <span>
                 {item.name}
+                {item.color && ` · Color ${item.color}`}
                 {item.size && ` · Size ${item.size}`}
                 {` × ${item.qty}`}
               </span>

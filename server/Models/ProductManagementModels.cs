@@ -33,10 +33,19 @@ public sealed class ProductUpsertRequest
     [MaxLength(20)]
     public string[] Colors { get; set; } = [];
 
+    [MaxLength(100)]
+    public InitialProductStockRequest[] InitialStocks { get; set; } = [];
+
     public bool IsActive { get; set; } = true;
 
     public bool IsMock { get; set; } = false;
 }
+
+public sealed record InitialProductStockRequest(
+    string Color,
+    string Size,
+    int Stock,
+    int LowStockThreshold);
 
 public sealed class UpdateProductStatusRequest
 {

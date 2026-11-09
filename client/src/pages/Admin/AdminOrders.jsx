@@ -98,6 +98,7 @@ export default function AdminOrders() {
 
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) {
       setStatus('error');
@@ -131,6 +132,7 @@ export default function AdminOrders() {
 
     return () => controller.abort();
   }, [user, reloadKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const summary = useMemo(() => ({
     total: orders.length,

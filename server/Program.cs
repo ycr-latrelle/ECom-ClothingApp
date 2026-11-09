@@ -140,20 +140,6 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // --------------------------------------------------
-// OUTPUT CACHING
-// --------------------------------------------------
-
-builder.Services.AddOutputCache(options =>
-{
-    options.AddPolicy("PublicProducts", policy =>
-    {
-        policy
-            .Expire(TimeSpan.FromSeconds(60))
-            .Tag("public-products");
-    });
-});
-
-// --------------------------------------------------
 // FIREBASE
 // --------------------------------------------------
 
@@ -335,9 +321,6 @@ app.UseRateLimiter();
 
 // 3. Enforce authorization requirements.
 app.UseAuthorization();
-
-// 4. Apply output caching after authorization.
-app.UseOutputCache();
 
 // --------------------------------------------------
 // HEALTH ENDPOINTS

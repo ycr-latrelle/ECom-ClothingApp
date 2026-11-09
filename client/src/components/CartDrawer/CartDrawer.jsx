@@ -20,14 +20,20 @@ function CartLine({ item }) {
         className="cart-check"
         checked={item.selected}
         onChange={() => toggleItem(item.key)}
-        aria-label={`Include ${item.name}${item.size ? `, size ${item.size}` : ''} in checkout`}
+        aria-label={`Include ${item.name}${item.color ? `, color ${item.color}` : ''}${item.size ? `, size ${item.size}` : ''} in checkout`}
       />
 
       <ProductImage src={item.image} alt="" />
 
       <div className="cart-item-info">
         <h4>{item.name}</h4>
-        {item.size && <p className="cart-item-size">Size {item.size}</p>}
+        {(item.color || item.size) && (
+          <p className="cart-item-size">
+            {[item.color && `Color ${item.color}`, item.size && `Size ${item.size}`]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
         <p>{formatPeso(item.price)}</p>
 
         <div className="cart-qty">

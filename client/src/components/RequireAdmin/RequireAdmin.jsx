@@ -24,6 +24,7 @@ export default function RequireAdmin({ children }) {
 
   const [retryCount, setRetryCount] = useState(0);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (checking || !user || !profile) {
       setAccess({
@@ -85,6 +86,7 @@ export default function RequireAdmin({ children }) {
       cancelled = true;
     };
   }, [user, checking, profile, retryCount]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (checking) {
     return (

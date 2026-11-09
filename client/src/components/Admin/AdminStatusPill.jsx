@@ -1,4 +1,3 @@
-import React from 'react';
 import './AdminStatusPill.css';
 
 export default function AdminStatusPill({ status }) {

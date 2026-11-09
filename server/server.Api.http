@@ -1,6 +1,56 @@
 @server.Api_HostAddress = http://localhost:5191
 
-GET {{server.Api_HostAddress}}/weatherforecast/
+@firebaseToken = replace-with-firebase-id-token
+@productId = replace-with-existing-product-guid
+
+###
+
+### Read active storefront products with live variant availability
+GET {{server.Api_HostAddress}}/api/products
 Accept: application/json
 
 ###
+
+### Create a product with its complete initial inventory in one request
+POST {{server.Api_HostAddress}}/api/admin/products
+Authorization: Bearer {{firebaseToken}}
+Content-Type: application/json
+
+{
+  "name": "Everyday Tee",
+  "slug": "everyday-tee",
+  "price": 799,
+  "category": "tops",
+  "status": "ready",
+  "sizes": ["S", "M"],
+  "colors": ["Black", "White"],
+  "isActive": true,
+  "initialStocks": [
+    { "color": "Black", "size": "S", "stock": 5, "lowStockThreshold": 3 },
+    { "color": "Black", "size": "M", "stock": 8, "lowStockThreshold": 3 },
+    { "color": "White", "size": "S", "stock": 4, "lowStockThreshold": 3 },
+    { "color": "White", "size": "M", "stock": 0, "lowStockThreshold": 3 }
+  ]
+}
+
+###
+
+### Add a color to an existing product without changing existing inventory
+PUT {{server.Api_HostAddress}}/api/admin/products/{{productId}}
+Authorization: Bearer {{firebaseToken}}
+Content-Type: application/json
+
+{
+  "name": "Everyday Tee",
+  "slug": "everyday-tee",
+  "price": 799,
+  "category": "tops",
+  "status": "ready",
+  "sizes": ["S", "M"],
+  "colors": ["Black", "White", "Navy"],
+  "isActive": true,
+  "initialStocks": [
+    { "color": "Navy", "size": "S", "stock": 5, "lowStockThreshold": 3 },
+    { "color": "Navy", "size": "M", "stock": 8, "lowStockThreshold": 3 }
+  ]
+}

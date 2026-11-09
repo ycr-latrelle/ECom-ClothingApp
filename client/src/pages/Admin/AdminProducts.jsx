@@ -10,7 +10,13 @@ import {
   uploadAdminProductImage,
 } from "../../api/adminProductApi.js";
 import { resolveImageUrl } from "../../utils/imageUrl.js";
-import { adjustInventoryStock } from "../../api/inventoryApi.js";
+
+import AdminPageHeader from "../../components/Admin/AdminPageHeader.jsx";
+import AdminStatCard from "../../components/Admin/AdminStatCard.jsx";
+import AdminDataTable from "../../components/Admin/AdminDataTable";
+import AdminModal from "../../components/Admin/AdminModal";
+import AdminStatusPill from "../../components/Admin/AdminStatusPill.jsx";
+
 import "./AdminProducts.css";
 
 const PAGE_SIZE = 8;
@@ -82,7 +88,6 @@ const emptyForm = {
   sizes: "",
   colors: "",
   isActive: true,
-  isMock: false,
 };
 
 export default function AdminProducts() {
@@ -111,7 +116,6 @@ export default function AdminProducts() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Initial stock is only entered when creating a new product.
   const [initialStocks, setInitialStocks] = useState({});
 
   const refreshProducts = useCallback(async () => {
@@ -135,19 +139,19 @@ export default function AdminProducts() {
     }
   }, [user]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     refreshProducts();
   }, [refreshProducts]);
 
   useEffect(() => {
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
-
     setImagePreviews(urls);
-
     return () => {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [imageFiles]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const categories = useMemo(() => {
     const values = [
@@ -155,22 +159,18 @@ export default function AdminProducts() {
         localProducts.map((product) => product.category).filter(Boolean),
       ),
     ];
-
     return values.sort((a, b) => a.localeCompare(b));
   }, [localProducts]);
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     const result = localProducts.filter((product) => {
       const matchesSearch =
         !query ||
         product.name?.toLowerCase().includes(query) ||
         product.slug?.toLowerCase().includes(query);
-
       const matchesCategory =
         category === "all" || product.category === category;
-
       const matchesStatus =
         status === "all" ||
         (status === "active" && getActive(product)) ||
@@ -178,38 +178,20 @@ export default function AdminProducts() {
         (status === "ready" && getProductStatus(product) === "ready") ||
         (status === "pre-order" &&
           getProductStatus(product) === "pre-order");
-
       return matchesSearch && matchesCategory && matchesStatus;
     });
 
     return result.sort((a, b) => {
-      if (sort === "name-asc") {
-        return (a.name || "").localeCompare(b.name || "");
-      }
-
-      if (sort === "name-desc") {
-        return (b.name || "").localeCompare(a.name || "");
-      }
-
-      if (sort === "price-asc") {
-        return Number(a.price || 0) - Number(b.price || 0);
-      }
-
-      if (sort === "price-desc") {
-        return Number(b.price || 0) - Number(a.price || 0);
-      }
-
+      if (sort === "name-asc") return (a.name || "").localeCompare(b.name || "");
+      if (sort === "name-desc") return (b.name || "").localeCompare(a.name || "");
+      if (sort === "price-asc") return Number(a.price || 0) - Number(b.price || 0);
+      if (sort === "price-desc") return Number(b.price || 0) - Number(a.price || 0);
       return 0;
     });
   }, [localProducts, search, category, status, sort]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / PAGE_SIZE),
-  );
-
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
@@ -217,7 +199,6 @@ export default function AdminProducts() {
 
   const activeCount = localProducts.filter(getActive).length;
   const inactiveCount = localProducts.length - activeCount;
-
   const preorderCount = localProducts.filter(
     (product) => getProductStatus(product) === "pre-order",
   ).length;
@@ -235,43 +216,30 @@ export default function AdminProducts() {
   function addImageFiles(selectedFiles) {
     const rejected = [];
     const validFiles = [];
-
     for (const file of selectedFiles) {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/gif",
-      ];
-
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       if (!allowedTypes.includes(file.type)) {
         rejected.push(`${file.name}: unsupported image format`);
         continue;
       }
-
       if (file.size > MAX_IMAGE_SIZE) {
         rejected.push(`${file.name}: exceeds 20 MB`);
         continue;
       }
-
       const isDuplicate = [...imageFiles, ...validFiles].some(
         (existing) =>
           existing.name === file.name &&
           existing.size === file.size &&
           existing.lastModified === file.lastModified,
       );
-
       if (isDuplicate) {
         rejected.push(`${file.name}: already selected`);
         continue;
       }
-
       validFiles.push(file);
     }
-
     const remainingSlots = MAX_IMAGE_COUNT - imageFiles.length;
     const acceptedFiles = validFiles.slice(0, Math.max(remainingSlots, 0));
-
     if (validFiles.length > acceptedFiles.length) {
       rejected.push(
         remainingSlots <= 0
@@ -281,11 +249,9 @@ export default function AdminProducts() {
             } could be added`,
       );
     }
-
     if (acceptedFiles.length > 0) {
       setImageFiles((current) => [...current, ...acceptedFiles]);
     }
-
     setImageError(rejected.join(". "));
   }
 
@@ -297,10 +263,8 @@ export default function AdminProducts() {
   function makeMainImage(index) {
     setImageFiles((current) => {
       if (index <= 0 || index >= current.length) return current;
-
       const next = [...current];
       const [picked] = next.splice(index, 1);
-
       return [picked, ...next];
     });
   }
@@ -309,7 +273,6 @@ export default function AdminProducts() {
     setImageFiles((current) =>
       current.filter((_, fileIndex) => fileIndex !== index),
     );
-
     setImageError("");
   }
 
@@ -326,7 +289,6 @@ export default function AdminProducts() {
 
   function openEditForm(product) {
     setEditingProduct(product);
-
     setForm({
       name: product.name || "",
       slug: product.slug || "",
@@ -337,10 +299,7 @@ export default function AdminProducts() {
       sizes: Array.isArray(product.sizes) ? product.sizes.join(", ") : "",
       colors: Array.isArray(product.colors) ? product.colors.join(", ") : "",
       isActive: getActive(product),
-      isMock: getMock(product),
     });
-
-    // Do not create or modify stock when editing existing products.
     setInitialStocks({});
     setSlugEdited(true);
     setFormError("");
@@ -351,7 +310,6 @@ export default function AdminProducts() {
 
   function closeForm() {
     if (saving) return;
-
     setFormOpen(false);
     setEditingProduct(null);
     setForm({ ...emptyForm });
@@ -363,21 +321,13 @@ export default function AdminProducts() {
 
   function handleFormChange(event) {
     const { name, value, type, checked } = event.target;
-
-    if (name === "slug") {
-      setSlugEdited(value !== "");
-    }
-
+    if (name === "slug") setSlugEdited(value !== "");
     setForm((current) => {
       const next = {
         ...current,
         [name]: type === "checkbox" ? checked : value,
       };
-
-      if (name === "name" && !slugEdited) {
-        next.slug = slugify(value);
-      }
-
+      if (name === "name" && !slugEdited) next.slug = slugify(value);
       return next;
     });
   }
@@ -389,100 +339,84 @@ export default function AdminProducts() {
     }));
   }
 
-  const formColors = useMemo(
-    () => parseVariantValues(form.colors),
-    [form.colors],
-  );
-
-  const formSizes = useMemo(
-    () => parseVariantValues(form.sizes),
-    [form.sizes],
-  );
-
+  const formColors = useMemo(() => parseVariantValues(form.colors), [form.colors]);
+  const formSizes = useMemo(() => parseVariantValues(form.sizes), [form.sizes]);
   const initialVariantRows = useMemo(
     () => buildVariantRows(formColors, formSizes),
     [formColors, formSizes],
   );
+  const newVariantRows = useMemo(() => {
+    if (!editingProduct) return initialVariantRows;
+
+    const existingColors = Array.isArray(editingProduct.colors)
+      ? editingProduct.colors
+      : [];
+    const existingSizes = Array.isArray(editingProduct.sizes)
+      ? editingProduct.sizes
+      : [];
+    const existingVariantKeys = new Set(
+      buildVariantRows(existingColors, existingSizes).map((variant) => variant.key),
+    );
+
+    return initialVariantRows.filter(
+      (variant) => !existingVariantKeys.has(variant.key),
+    );
+  }, [editingProduct, initialVariantRows]);
 
   async function handleSave(event) {
     event.preventDefault();
-
     if (saving) return;
-
     setFormError("");
     setImageError("");
-
     const name = form.name.trim();
     const slug = form.slug.trim();
-
     if (!name || !slug || form.price === "") {
       setFormError("Product name, slug, and price are required.");
       return;
     }
-
     if (!Number.isFinite(Number(form.price)) || Number(form.price) < 0) {
       setFormError("Enter a valid product price.");
       return;
     }
-
     const normalizedSlug = slugify(slug);
-
     if (!normalizedSlug) {
       setFormError("Slug can only contain letters, numbers, and hyphens.");
       return;
     }
-
     if (normalizedSlug.length > 140) {
       setFormError("The product slug cannot exceed 140 characters.");
       return;
     }
-
     if (name.length > 120) {
       setFormError("The product name cannot exceed 120 characters.");
       return;
     }
-
     const colors = parseVariantValues(form.colors);
     const sizes = parseVariantValues(form.sizes);
-
     if (!editingProduct && (colors.length === 0 || sizes.length === 0)) {
-      setFormError(
-        "Enter at least one color and one size before creating a product.",
-      );
+      setFormError("Enter at least one color and one size before creating a product.");
       return;
     }
-
-    if (!editingProduct && initialVariantRows.length > 100) {
-      setFormError(
-        "A product cannot have more than 100 color-size combinations.",
-      );
+    if (initialVariantRows.length > 100) {
+      setFormError("A product cannot have more than 100 color-size combinations.");
       return;
     }
-
-    if (!editingProduct) {
-      const missingStock = initialVariantRows.find(
+    if (newVariantRows.length > 0) {
+      const missingStock = newVariantRows.find(
         (variant) =>
           initialStocks[variant.key] === undefined ||
           String(initialStocks[variant.key]).trim() === "",
       );
-
       if (missingStock) {
         setFormError(
           `Enter the initial stock quantity for ${missingStock.color} / ${missingStock.size}. Use 0 if there is no stock.`,
         );
         return;
       }
-
-      const invalidStock = initialVariantRows.find((variant) => {
+      const invalidStock = newVariantRows.find((variant) => {
         const value = Number(initialStocks[variant.key]);
-
-        return (
-          !Number.isInteger(value) ||
-          value < 0 ||
-          value > 2_147_483_647
-        );
+        return !Number.isInteger(value) || value < 0 || value > 2_147_483_647;
       });
-
       if (invalidStock) {
         setFormError(
           `Stock for ${invalidStock.color} / ${invalidStock.size} must be a whole number greater than or equal to zero.`,
@@ -490,23 +424,18 @@ export default function AdminProducts() {
         return;
       }
     }
-
     const duplicateSlug = localProducts.some(
       (product) =>
-        product.slug === normalizedSlug &&
-        product.id !== editingProduct?.id,
+        product.slug === normalizedSlug && product.id !== editingProduct?.id,
     );
-
     if (duplicateSlug) {
       setFormError("A product with this slug already exists.");
       return;
     }
-
     if (imageFiles.length > MAX_IMAGE_COUNT) {
       setImageError(`Maximum of ${MAX_IMAGE_COUNT} images allowed.`);
       return;
     }
-
     const productData = {
       name,
       slug: normalizedSlug,
@@ -516,65 +445,39 @@ export default function AdminProducts() {
       sizes,
       colors,
       isActive: form.isActive,
-      isMock: form.isMock,
+      isMock: getMock(editingProduct),
+      ...((!editingProduct || newVariantRows.length > 0) && {
+        initialStocks: newVariantRows.map((variant) => ({
+          color: variant.color,
+          size: variant.size,
+          stock: Number(initialStocks[variant.key]),
+          lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+        })),
+      }),
     };
-
     setSaving(true);
-
     let savedProduct = null;
     let uploadedCount = 0;
-    let savedStockCount = 0;
-
     try {
       if (editingProduct) {
-        savedProduct = await updateAdminProduct(
-          user,
-          editingProduct.id,
-          productData,
-        );
+        savedProduct = await updateAdminProduct(user, editingProduct.id, productData);
       } else {
         savedProduct = await createAdminProduct(user, productData);
       }
-
       const productId = savedProduct?.id ?? savedProduct?.productId;
-
-      if (!productId) {
-        throw new Error(
-          "The product API did not return a product ID. The product may have been created, but its initial stock could not be saved.",
-        );
-      }
-
-      // Create inventory rows for each manually entered color-size pair.
-      // The API receives the final on-hand quantity for each combination.
-      if (!editingProduct) {
-        for (const variant of initialVariantRows) {
-          const stock = Number(initialStocks[variant.key]);
-
-          await adjustInventoryStock(user, productId, {
-            color: variant.color,
-            size: variant.size,
-            stock,
-            lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
-          });
-
-          savedStockCount += 1;
-        }
-      }
-
-      // Upload each image individually.
+      if (!productId) throw new Error("Product API failed to return ID.");
       for (const file of imageFiles) {
         await uploadAdminProductImage(user, productId, file);
         uploadedCount += 1;
       }
-
       await refreshProducts();
-
       setNotice(
         editingProduct
-          ? `Product "${name}" updated successfully.`
-          : `Product "${name}" created successfully with ${savedStockCount} inventory variant(s).`,
+          ? newVariantRows.length > 0
+            ? `Product "${name}" updated with ${newVariantRows.length} new inventory variant(s).`
+            : `Product "${name}" updated successfully.`
+          : `Product "${name}" created successfully with ${initialVariantRows.length} inventory variant(s).`,
       );
-
       setFormOpen(false);
       setEditingProduct(null);
       setForm({ ...emptyForm });
@@ -584,21 +487,8 @@ export default function AdminProducts() {
       setPage(1);
     } catch (error) {
       await refreshProducts();
-
-      if (savedProduct && !editingProduct && savedStockCount < initialVariantRows.length) {
-        const failedVariant = initialVariantRows[savedStockCount];
-
-        setFormError(
-          `The product "${name}" was created, but inventory setup stopped after ${savedStockCount} of ${initialVariantRows.length} variants. ${
-            failedVariant
-              ? `The next variant was ${failedVariant.color} / ${failedVariant.size}. `
-              : ""
-          }${error.message} Open the Inventory page and complete the missing stock entries.`,
-        );
-      } else if (savedProduct && imageFiles.length > uploadedCount) {
-        setFormError(
-          `The product was saved, but an image upload failed after ${uploadedCount} successful upload(s). ${error.message} You can edit the product and upload the remaining images.`,
-        );
+      if (savedProduct && imageFiles.length > uploadedCount) {
+        setFormError(`Product saved, but image upload failed. ${error.message}`);
       } else {
         setFormError(error.message || "Could not save the product.");
       }
@@ -609,19 +499,9 @@ export default function AdminProducts() {
 
   async function toggleActive(product) {
     try {
-      await setAdminProductStatus(
-        user,
-        product.id,
-        !getActive(product),
-      );
-
+      await setAdminProductStatus(user, product.id, !getActive(product));
       await refreshProducts();
-
-      setNotice(
-        `"${product.name}" is now ${
-          getActive(product) ? "inactive" : "active"
-        }.`,
-      );
+      setNotice(`"${product.name}" is now ${getActive(product) ? "inactive" : "active"}.`);
     } catch (error) {
       setNotice(error.message || "Could not update product status.");
     }
@@ -631,69 +511,88 @@ export default function AdminProducts() {
     setNotice("");
   }
 
+  const tableColumns = [
+    { label: 'Product', className: 'col-product' },
+    { label: 'Category', className: 'col-category' },
+    { label: 'Price', className: 'col-price' },
+    { label: 'Availability', className: 'col-availability' },
+    { label: 'Listing', className: 'col-listing' },
+    { label: 'Actions', className: 'col-actions' },
+  ];
+
+  const renderProductRow = (product) => (
+    <>
+      <td>
+        <div className="ap-product-identity">
+          <span className="ap-product-thumb">
+            {getProductImage(product) ? (
+              <img src={resolveImageUrl(getProductImage(product))} alt="" loading="lazy" />
+            ) : (
+              <span>◇</span>
+            )}
+          </span>
+          <div className="ap-product-name">
+            <strong>{product.name}</strong>
+            <small>{product.slug || "No slug"}</small>
+          </div>
+        </div>
+      </td>
+      <td><span className="ap-category-label">{product.category || "Uncategorized"}</span></td>
+      <td className="ap-price">{formatPeso(product.price)}</td>
+      <td>
+        <AdminStatusPill status={getProductStatus(product) === "pre-order" ? "Processing" : "Verified"} />
+      </td>
+      <td>
+        <span className={`ap-listing-status ${getActive(product) ? "active" : "inactive"}`}>
+          <span />
+          {getActive(product) ? "Active" : "Inactive"}
+        </span>
+      </td>
+      <td>
+        <div className="ap-row-actions">
+          <button className="admin-btn admin-btn-ghost" onClick={() => setSelectedProduct(product)}>View</button>
+          <button className="admin-btn admin-btn-ghost" onClick={() => openEditForm(product)}>Edit</button>
+          <button className="admin-btn admin-btn-ghost" onClick={() => toggleActive(product)}>
+            {getActive(product) ? "Deactivate" : "Activate"}
+          </button>
+        </div>
+      </td>
+    </>
+  );
+
   return (
     <section className="admin-products">
-      <header className="admin-products-heading">
-        <div>
-          <p className="eyebrow">STORE MANAGEMENT</p>
-          <h1>Products</h1>
-          <p className="admin-page-description">
-            Manage your product catalog, availability, and listings.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="ap-primary-button"
-          onClick={openCreateForm}
-        >
-          <span aria-hidden="true">＋</span>
-          Add product
-        </button>
-      </header>
+      <AdminPageHeader
+        eyebrow="STORE MANAGEMENT"
+        title="Products"
+        description="Manage your product catalog, availability, and listings."
+        action={
+          <button className="admin-btn admin-btn-primary" onClick={openCreateForm}>
+            <span>＋</span> Add product
+          </button>
+        }
+      />
 
       {notice && (
-        <div className="ap-action-notice" role="status">
-          <span>{notice}</span>
-          <button type="button" onClick={clearNotice} aria-label="Dismiss">
-            ×
-          </button>
+        <div className="admin-action-notice" role="status">
+          <span className="admin-action-notice-text">{notice}</span>
+          <button className="admin-btn admin-btn-ghost" onClick={clearNotice} aria-label="Dismiss">×</button>
         </div>
       )}
 
       <div className="ap-summary-grid">
-        <article className="ap-summary-card">
-          <span>Total products</span>
-          <strong>{catalogLoading ? "—" : localProducts.length}</strong>
-          <small>Products in the database</small>
-        </article>
-
-        <article className="ap-summary-card">
-          <span>Active listings</span>
-          <strong>{catalogLoading ? "—" : activeCount}</strong>
-          <small>Currently marked as active</small>
-        </article>
-
-        <article className="ap-summary-card">
-          <span>Inactive listings</span>
-          <strong>{catalogLoading ? "—" : inactiveCount}</strong>
-          <small>Currently marked as inactive</small>
-        </article>
-
-        <article className="ap-summary-card">
-          <span>Pre-order products</span>
-          <strong>{catalogLoading ? "—" : preorderCount}</strong>
-          <small>Products marked for pre-order</small>
-        </article>
+        <AdminStatCard label="Total products" value={catalogLoading ? "—" : localProducts.length} description="Products in the database" />
+        <AdminStatCard label="Active listings" value={catalogLoading ? "—" : activeCount} description="Currently marked as active" />
+        <AdminStatCard label="Inactive listings" value={catalogLoading ? "—" : inactiveCount} description="Currently marked as inactive" />
+        <AdminStatCard label="Pre-order products" value={catalogLoading ? "—" : preorderCount} description="Products marked for pre-order" />
       </div>
 
       <section className="ap-catalog-panel">
         <div className="ap-catalog-header">
-          <div>
-            <h2>Product catalog</h2>
-            <p>Search, filter, and review your store products.</p>
+          <div className="admin-catalog-title-group">
+            <h2 className="admin-catalog-title">Product catalog</h2>
+            <p className="admin-catalog-description">Search, filter, and review your store products.</p>
           </div>
-
           <span className="ap-result-count">
             {filteredProducts.length}{" "}
             {filteredProducts.length === 1 ? "product" : "products"}
@@ -701,8 +600,8 @@ export default function AdminProducts() {
         </div>
 
         <div className="ap-toolbar">
-          <label className="ap-search">
-            <span aria-hidden="true">⌕</span>
+          <div className="ap-search">
+            <span className="admin-search-icon">⌕</span>
             <input
               type="search"
               value={search}
@@ -710,267 +609,49 @@ export default function AdminProducts() {
               placeholder="Search product name or slug..."
               aria-label="Search products"
             />
-          </label>
-
-          <label className="ap-filter">
-            <span>Category</span>
-            <select
-              value={category}
-              onChange={(event) =>
-                updateFilter(setCategory, event.target.value)
-              }
-            >
-              <option value="all">All categories</option>
-              {categories.map((item) => (
-                <option value={item} key={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="ap-filter">
-            <span>Status</span>
-            <select
-              value={status}
-              onChange={(event) => updateFilter(setStatus, event.target.value)}
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="ready">Ready stock</option>
-              <option value="pre-order">Pre-order</option>
-            </select>
-          </label>
-
-          <label className="ap-filter">
-            <span>Sort by</span>
-            <select
-              value={sort}
-              onChange={(event) => updateFilter(setSort, event.target.value)}
-            >
-              <option value="newest">Default order</option>
-              <option value="name-asc">Name: A to Z</option>
-              <option value="name-desc">Name: Z to A</option>
-              <option value="price-asc">Price: low to high</option>
-              <option value="price-desc">Price: high to low</option>
-            </select>
-          </label>
+          </div>
+          <div className="admin-filter-group">
+            <label className="ap-filter">
+              <span>Category</span>
+              <select value={category} onChange={(event) => updateFilter(setCategory, event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+            </label>
+            <label className="ap-filter">
+              <span>Status</span>
+              <select value={status} onChange={(event) => updateFilter(setStatus, event.target.value)}>{['all', 'active', 'inactive', 'ready', 'pre-order'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+            </label>
+            <label className="ap-filter">
+              <span>Sort by</span>
+              <select value={sort} onChange={(event) => updateFilter(setSort, event.target.value)}>{['newest', 'name-asc', 'name-desc', 'price-asc', 'price-desc'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+            </label>
+          </div>
         </div>
 
-        {catalogLoading ? (
-          <div className="ap-state">
-            <span className="ap-loader" />
-            <p>Loading products...</p>
-          </div>
-        ) : catalogError ? (
-          <div className="ap-state ap-state-error" role="alert">
-            <strong>Products could not be loaded.</strong>
-            <p>{catalogError}</p>
-            <button
-              type="button"
-              className="ap-secondary-button"
-              onClick={refreshProducts}
-            >
-              Try again
-            </button>
-          </div>
-        ) : paginatedProducts.length === 0 ? (
-          <div className="ap-state">
-            <span className="ap-empty-icon">◇</span>
-            <strong>No products found</strong>
-            <p>Try changing your search or filters.</p>
-            <button
-              type="button"
-              className="ap-secondary-button"
-              onClick={() => {
-                setSearch("");
-                setCategory("all");
-                setStatus("all");
-                setSort("newest");
-                setPage(1);
-              }}
-            >
-              Clear filters
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="ap-table-wrap">
-              <table className="ap-product-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Availability</th>
-                    <th>Listing</th>
-                    <th aria-label="Actions" />
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {paginatedProducts.map((product) => (
-                    <tr key={product.id}>
-                      <td>
-                        <button
-                          type="button"
-                          className="ap-product-identity"
-                          onClick={() => setSelectedProduct(product)}
-                        >
-                          <span className="ap-product-thumb">
-                            {getProductImage(product) ? (
-                              <img
-                                src={resolveImageUrl(getProductImage(product))}
-                                alt=""
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span>◇</span>
-                            )}
-                          </span>
-
-                          <span className="ap-product-name">
-                            <strong>{product.name}</strong>
-                            <small>{product.slug || "No slug"}</small>
-                          </span>
-                        </button>
-                      </td>
-
-                      <td>
-                        <span className="ap-category-label">
-                          {product.category || "Uncategorized"}
-                        </span>
-                      </td>
-
-                      <td className="ap-price">{formatPeso(product.price)}</td>
-
-                      <td>
-                        <span
-                          className={`ap-status-pill ${
-                            getProductStatus(product) === "pre-order"
-                              ? "preorder"
-                              : "ready"
-                          }`}
-                        >
-                          {getProductStatus(product) === "pre-order"
-                            ? "Pre-order"
-                            : "Ready stock"}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`ap-listing-status ${
-                            getActive(product) ? "active" : "inactive"
-                          }`}
-                        >
-                          <span />
-                          {getActive(product) ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="ap-row-actions">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedProduct(product)}
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(product)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleActive(product)}
-                          >
-                            {getActive(product) ? "Deactivate" : "Activate"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <AdminDataTable
+          columns={tableColumns}
+          data={paginatedProducts}
+          renderRow={renderProductRow}
+          loadingState={catalogLoading ? "Loading products..." : null}
+          errorState={catalogError || null}
+          emptyState={
+            <div className="ap-state">
+              <span className="ap-empty-icon">◇</span>
+              <strong>No products found</strong>
+              <p>Try changing your search or filters.</p>
+              <button className="admin-btn admin-btn-secondary" onClick={() => { setSearch(""); setCategory("all"); setStatus("all"); setSort("newest"); setPage(1); }}>Clear filters</button>
             </div>
+          }
+        />
 
-            <div className="ap-mobile-list">
-              {paginatedProducts.map((product) => (
-                <article className="ap-mobile-product" key={product.id}>
-                  <div className="ap-mobile-product-main">
-                    <span className="ap-product-thumb">
-                      {getProductImage(product) ? (
-                        <img
-                          src={resolveImageUrl(getProductImage(product))}
-                          alt=""
-                        />
-                      ) : (
-                        <span>◇</span>
-                      )}
-                    </span>
-
-                    <div className="ap-product-name">
-                      <strong>{product.name}</strong>
-                      <small>{product.category || "Uncategorized"}</small>
-                      <b>{formatPeso(product.price)}</b>
-                    </div>
-                  </div>
-
-                  <div className="ap-mobile-product-actions">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProduct(product)}
-                    >
-                      View
-                    </button>
-                    <button type="button" onClick={() => openEditForm(product)}>
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => toggleActive(product)}>
-                      {getActive(product) ? "Deactivate" : "Activate"}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="ap-pagination">
-              <span>
-                Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of{" "}
-                {filteredProducts.length}
-              </span>
-
-              <div>
-                <button
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setPage((value) => Math.max(1, value - 1))}
-                >
-                  Previous
-                </button>
-
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setPage((value) => Math.min(totalPages, value + 1))
-                  }
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+        <div className="ap-pagination">
+          <span className="admin-pagination-info">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of {filteredProducts.length}
+          </span>
+          <div>
+            <button className="admin-btn admin-btn-ghost" disabled={currentPage === 1} onClick={() => setPage((v) => Math.max(1, v - 1))}>Previous</button>
+            <span className="admin-pagination-current">Page {currentPage} of {totalPages}</span>
+            <button className="admin-btn admin-btn-ghost" disabled={currentPage === totalPages} onClick={() => setPage((v) => Math.min(totalPages, v + 1))}>Next</button>
+          </div>
+        </div>
       </section>
 
       {selectedProduct && (
@@ -983,6 +664,7 @@ export default function AdminProducts() {
       )}
 
       <ProductForm
+        key={formOpen ? "open" : "closed"}
         open={formOpen}
         editing={editingProduct}
         form={form}
@@ -999,7 +681,7 @@ export default function AdminProducts() {
         onMakeMain={makeMainImage}
         saving={saving}
         slugEdited={slugEdited}
-        initialVariantRows={initialVariantRows}
+        newVariantRows={newVariantRows}
         initialStocks={initialStocks}
         onInitialStockChange={handleInitialStockChange}
       />
@@ -1013,150 +695,84 @@ function ProductDetails({ product, onClose, onEdit, user }) {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadImages() {
       setImagesLoading(true);
-
       try {
         const result = await fetchAdminProductImages(user, product.id);
-
-        if (!cancelled) {
-          setImages(
-            [...result].sort(
-              (a, b) => a.displayOrder - b.displayOrder,
-            ),
-          );
-        }
+        if (!cancelled) setImages([...result].sort((a, b) => a.displayOrder - b.displayOrder));
       } catch {
         if (!cancelled) setImages([]);
       } finally {
         if (!cancelled) setImagesLoading(false);
       }
     }
-
     loadImages();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user, product.id]);
 
-  const primaryImage =
-    images.find((image) => image.isPrimary) || images[0];
-
-  const imageUrl = primaryImage?.url
-    ? resolveImageUrl(primaryImage.url)
-    : resolveImageUrl(getProductImage(product));
+  const primaryImage = images.find((image) => image.isPrimary) || images[0];
+  const imageUrl = primaryImage?.url ? resolveImageUrl(primaryImage.url) : resolveImageUrl(getProductImage(product));
 
   return (
-    <div
-      className="ap-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <AdminModal
+      isOpen={true}
+      onClose={onClose}
+      title={product.name}
+      subtitle="Product Details"
+      size="md"
+      footer={
+        <>
+          <button className="admin-btn admin-btn-secondary" onClick={onClose}>Close</button>
+          <button className="admin-btn admin-btn-primary" onClick={onEdit}>Edit product</button>
+        </>
+      }
     >
-      <section
-        className="ap-modal ap-product-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ap-detail-title"
-      >
-        <div className="ap-modal-header">
+      <div className="ap-detail-body">
+        <div className="ap-detail-image">
+          {imagesLoading ? (
+            <span className="admin-loading-text">Loading images...</span>
+          ) : imageUrl ? (
+            <img src={imageUrl} alt={product.name} />
+          ) : (
+            <span className="admin-loading-text">No product image</span>
+          )}
+        </div>
+        <div className="ap-detail-information">
           <div>
-            <p className="eyebrow">PRODUCT DETAILS</p>
-            <h2 id="ap-detail-title">{product.name}</h2>
+            <span>Price</span>
+            <strong>{formatPeso(product.price)}</strong>
           </div>
-
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="ap-detail-body">
-          <div className="ap-detail-image">
-            {imagesLoading ? (
-              <span>Loading images...</span>
-            ) : imageUrl ? (
-              <img src={imageUrl} alt={product.name} />
-            ) : (
-              <span>No product image</span>
-            )}
+          <div>
+            <span>Slug</span>
+            <strong>{product.slug || "—"}</strong>
           </div>
-
-          <div className="ap-detail-information">
-            <div>
-              <span>Price</span>
-              <strong>{formatPeso(product.price)}</strong>
-            </div>
-            <div>
-              <span>Slug</span>
-              <strong>{product.slug || "—"}</strong>
-            </div>
-            <div>
-              <span>Category</span>
-              <strong>{product.category || "—"}</strong>
-            </div>
-            <div>
-              <span>Availability</span>
-              <strong>{getProductStatus(product)}</strong>
-            </div>
-            <div>
-              <span>Colors</span>
-              <strong>
-                {Array.isArray(product.colors) && product.colors.length
-                  ? product.colors.join(", ")
-                  : "Not specified"}
-              </strong>
-            </div>
-            <div>
-              <span>Sizes</span>
-              <strong>
-                {Array.isArray(product.sizes) && product.sizes.length
-                  ? product.sizes.join(", ")
-                  : "Not specified"}
-              </strong>
-            </div>
-            <div>
-              <span>Listing status</span>
-              <strong>{getActive(product) ? "Active" : "Inactive"}</strong>
-            </div>
-            <div>
-              <span>Mock product</span>
-              <strong>{getMock(product) ? "Yes" : "No"}</strong>
-            </div>
-            <div>
-              <span>Product images</span>
-              <strong>
-                {imagesLoading ? "Loading..." : images.length}
-              </strong>
-            </div>
+          <div>
+            <span>Category</span>
+            <strong>{product.category || "—"}</strong>
+          </div>
+          <div>
+            <span>Availability</span>
+            <strong>{getProductStatus(product)}</strong>
+          </div>
+          <div>
+            <span>Colors</span>
+            <strong>{Array.isArray(product.colors) && product.colors.length ? product.colors.join(", ") : "Not specified"}</strong>
+          </div>
+          <div>
+            <span>Sizes</span>
+            <strong>{Array.isArray(product.sizes) && product.sizes.length ? product.sizes.join(", ") : "Not specified"}</strong>
+          </div>
+          <div>
+            <span>Listing status</span>
+            <strong>{getActive(product) ? "Active" : "Inactive"}</strong>
+          </div>
+          <div>
+            <span>Product images</span>
+            <strong>{imagesLoading ? "Loading..." : images.length}</strong>
           </div>
         </div>
-
-        <div className="ap-modal-footer">
-          <button
-            type="button"
-            className="ap-secondary-button"
-            onClick={onClose}
-          >
-            Close
-          </button>
-
-          <button
-            type="button"
-            className="ap-primary-button"
-            onClick={onEdit}
-          >
-            Edit product
-          </button>
-        </div>
-      </section>
-    </div>
+      </div>
+    </AdminModal>
   );
 }
 
@@ -1177,26 +793,20 @@ function ProductForm({
   onMakeMain,
   saving,
   slugEdited,
-  initialVariantRows,
+  newVariantRows,
   initialStocks,
   onInitialStockChange,
 }) {
   const [dragging, setDragging] = useState(false);
-  const [failedImage, setFailedImage] = useState("");
-
-  const urlFailed = failedImage !== "" && failedImage === form.image;
-
+  const [stockForAll, setStockForAll] = useState("");
   useEffect(() => {
     if (!open) return undefined;
-
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !saving) onClose();
     };
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
@@ -1205,358 +815,273 @@ function ProductForm({
 
   if (!open) return null;
 
-  const categoryOptions = CATEGORY_OPTIONS.some(
-    (option) => option.value === form.category,
-  )
+  const categoryOptions = CATEGORY_OPTIONS.some((option) => option.value === form.category)
     ? CATEGORY_OPTIONS
     : [...CATEGORY_OPTIONS, { value: form.category, label: form.category }];
 
   return (
-    <div
-      className="ap-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onClose();
-      }}
+    <AdminModal
+      isOpen={open}
+      onClose={onClose}
+      title={editing ? "Edit product" : "Add product"}
+      subtitle={editing ? "Update the listing details and product photos." : "Add the product details, variants, current stock, and photos."}
+      size="lg"
+      footer={
+        <>
+          <button className="admin-btn admin-btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="admin-btn admin-btn-primary" onClick={onSubmit} disabled={saving}>
+            {saving ? "Saving…" : editing ? "Save changes" : "Add product"}
+          </button>
+        </>
+      }
     >
-      <section
-        className="ap-modal ap-form-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ap-form-title"
-      >
-        <div className="ap-modal-header">
-          <div>
-            <p className="eyebrow">PRODUCT CATALOG</p>
-            <h2 id="ap-form-title">
-              {editing ? "Edit product" : "Add product"}
-            </h2>
-            <p>
-              {editing
-                ? "Update product information and upload additional images."
-                : "Create a product listing, define its variants, and enter initial stock."}
-            </p>
+      <form className="ap-product-form" onSubmit={onSubmit}>
+        <section className="ap-form-section">
+          <header className="ap-form-section-header">
+            <span>01</span>
+            <div>
+              <h3>Product details</h3>
+              <p>Set the name, price, category, and store availability.</p>
+            </div>
+          </header>
+          <div className="admin-form-grid">
+          <div className="admin-form-group">
+            <label htmlFor="product-name">Product name *</label>
+            <input id="product-name" name="name" value={form.name} onChange={onChange} required autoFocus maxLength={120} />
+          </div>
+          <div className="admin-form-group">
+            <label htmlFor="product-slug">Product slug *</label>
+            <input id="product-slug" name="slug" value={form.slug} onChange={onChange} required maxLength={140} />
+            <small className="admin-form-hint">{slugEdited ? "Lowercase letters, numbers, and hyphens." : "Created from the name. Edit it to customize."}</small>
+          </div>
+          <div className="admin-form-group">
+            <label htmlFor="product-price">Price (PHP) *</label>
+            <input id="product-price" name="price" type="number" min="0" step="0.01" value={form.price} onChange={onChange} required />
+          </div>
+          <div className="admin-form-group">
+            <label htmlFor="product-category">Category</label>
+            <select id="product-category" name="category" value={form.category} onChange={onChange}>
+              {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </div>
+          <div className="admin-form-group">
+            <label htmlFor="product-status">Availability</label>
+            <select id="product-status" name="status" value={form.status} onChange={onChange}>
+              <option value="ready">Ready stock</option>
+              <option value="pre-order">Pre-order</option>
+            </select>
+          </div>
+          <label className="ap-listing-toggle">
+            <input type="checkbox" name="isActive" checked={form.isActive} onChange={onChange} />
+            <span className="ap-listing-toggle-copy">
+              <strong>Active listing</strong>
+              <small>Make this product visible in your store.</small>
+            </span>
+          </label>
+          </div>
+        </section>
+
+        <section className="ap-form-section">
+          <header className="ap-form-section-header">
+            <span>02</span>
+            <div>
+              <h3>{editing ? "Product variants" : "Variants & inventory"}</h3>
+              <p>
+                {editing
+                  ? "Add colors or sizes to create new variants. Existing options and their stock must be kept."
+                  : "Define colors and sizes, then enter your on-hand stock."}
+              </p>
+            </div>
+          </header>
+          <div className="ap-variant-fields">
+            <div className="admin-form-group">
+              <label htmlFor="product-colors">Colors</label>
+              <input
+                id="product-colors"
+                name="colors"
+                value={form.colors}
+                onChange={(event) => {
+                  setStockForAll("");
+                  onChange(event);
+                }}
+                placeholder="Black, White, Navy Blue"
+                disabled={saving}
+              />
+              <small className="admin-form-hint">
+                {editing
+                  ? "Keep every existing color; you can add more."
+                  : "Separate colors with commas."}
+              </small>
+            </div>
+            <div className="admin-form-group">
+              <label htmlFor="product-sizes">Sizes</label>
+              <input
+                id="product-sizes"
+                name="sizes"
+                value={form.sizes}
+                onChange={(event) => {
+                  setStockForAll("");
+                  onChange(event);
+                }}
+                placeholder="S, M, L, XL"
+                disabled={saving}
+              />
+              <small className="admin-form-hint">
+                {editing
+                  ? "Keep every existing size; you can add more."
+                  : "Separate sizes with commas."}
+              </small>
+            </div>
           </div>
 
-          <button
-            type="button"
-            className="ap-modal-close"
-            onClick={onClose}
-            disabled={saving}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <form className="ap-product-form" onSubmit={onSubmit}>
-          <label>
-            Product name *
-            <input
-              name="name"
-              value={form.name}
-              onChange={onChange}
-              required
-              autoFocus
-              maxLength={120}
-            />
-          </label>
-
-          <label>
-            Product slug *
-            <input
-              name="slug"
-              value={form.slug}
-              onChange={onChange}
-              required
-              maxLength={140}
-            />
-            <small>
-              {slugEdited
-                ? "Lowercase letters, numbers, and hyphens."
-                : "Created from the name. Edit it to customize."}
-            </small>
-          </label>
-
-          <label>
-            Price (PHP) *
-            <input
-              name="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={onChange}
-              required
-            />
-          </label>
-
-          {form.image && (
-            <div className="ap-form-image-preview">
-              {urlFailed ? (
-                <span>Existing image path unavailable</span>
-              ) : (
-                <img
-                  src={resolveImageUrl(form.image)}
-                  alt="Current product"
-                  onError={() => setFailedImage(form.image)}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="ap-image-upload-section ap-form-full">
-            <div className="ap-image-upload-heading">
+        {(!editing || newVariantRows.length > 0) && (
+          <section className="ap-initial-stock-section">
+            <div className="ap-initial-stock-heading">
               <div>
-                <strong>Product images</strong>
+                <span className="ap-form-section-kicker">INVENTORY</span>
+                <strong>{editing ? "Stock for new variants" : "Current stock on hand"}</strong>
                 <p>
-                  Select multiple photos for different product angles and
-                  details. Newly selected images will be uploaded when you save.
+                  {editing
+                    ? "Set the starting quantity for each newly added color-size combination. Existing inventory will not change."
+                    : "Enter the quantity you physically have for each color and size."}
                 </p>
               </div>
-
-              <span>
-                {imageFiles.length}/{MAX_IMAGE_COUNT} selected
-              </span>
+              {newVariantRows.length > 0 && (
+                <span className="ap-stock-variant-count">
+                  {newVariantRows.length} {newVariantRows.length === 1 ? "new variant" : "new variants"}
+                </span>
+              )}
             </div>
+            {newVariantRows.length > 0 ? (
+              <>
+                <label className="ap-stock-bulk-field">
+                  <span>Set the same quantity for all variants</span>
+                  <span className="ap-stock-bulk-control">
+                    <input
+                      type="number"
+                      min="0"
+                      max="2147483647"
+                      step="1"
+                      inputMode="numeric"
+                      placeholder="Quantity"
+                      value={stockForAll}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setStockForAll(value);
+                        if (value !== "" && Number.isInteger(Number(value)) &&
+                            Number(value) >= 0 && Number(value) <= 2_147_483_647) {
+                          newVariantRows.forEach((variant) =>
+                            onInitialStockChange(variant.key, value),
+                          );
+                        }
+                      }}
+                      disabled={saving}
+                    />
+                    <span>units per variant</span>
+                  </span>
+                </label>
+                <div className="ap-initial-stock-table-wrap">
+                  <table className="ap-initial-stock-table">
+                    <thead>
+                      <tr>
+                        <th>Color</th>
+                        <th>Size</th>
+                        <th>Quantity on hand</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newVariantRows.map((variant) => (
+                        <tr key={variant.key}>
+                          <td>{variant.color}</td>
+                          <td>{variant.size}</td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              max="2147483647"
+                              step="1"
+                              inputMode="numeric"
+                              placeholder="Enter quantity"
+                              value={initialStocks[variant.key] ?? ""}
+                              onChange={(event) => {
+                                setStockForAll("");
+                                onInitialStockChange(variant.key, event.target.value);
+                              }}
+                              disabled={saving}
+                              aria-label={`Current stock for ${variant.color}, size ${variant.size}`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="ap-stock-empty">
+                Add at least one color and size above to enter inventory quantities.
+              </div>
+            )}
+          </section>
+        )}
+        </section>
 
+        <section className="ap-form-section">
+          <header className="ap-form-section-header">
+            <span>03</span>
+            <div>
+              <h3>Product photos</h3>
+              <p>Add clear photos to help customers see your product.</p>
+            </div>
+          </header>
+          <div className="ap-image-upload-section">
+            <div className="ap-image-upload-heading">
+            <div className="admin-image-upload-title-group">
+              <strong>Product images</strong>
+              <p>Select multiple photos for different product angles and details. Newly selected images will be uploaded when you save.</p>
+            </div>
+            <span>{imageFiles.length}/{MAX_IMAGE_COUNT} selected</span>
+            </div>
             <label
-              className={`ap-image-upload-area${dragging ? " is-dragging" : ""}${
-                imageFiles.length >= MAX_IMAGE_COUNT ? " is-disabled" : ""
-              }`}
+              className={`ap-image-upload-area ${dragging ? " is-dragging" : ""}${imageFiles.length >= MAX_IMAGE_COUNT ? " is-disabled" : ""}`}
               onDragOver={(event) => {
                 event.preventDefault();
                 setDragging(true);
               }}
-              onDragLeave={() => setDragging(false)}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setDragging(false);
+                }
+              }}
               onDrop={(event) => {
                 event.preventDefault();
                 setDragging(false);
                 onAddFiles(Array.from(event.dataTransfer.files || []));
               }}
             >
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                multiple
-                onChange={onImageSelection}
-                disabled={saving || imageFiles.length >= MAX_IMAGE_COUNT}
-              />
-
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple onChange={onImageSelection} disabled={saving || imageFiles.length >= MAX_IMAGE_COUNT} />
               <span className="ap-image-upload-icon">＋</span>
               <strong>Drop images here or click to browse</strong>
               <small>PNG, JPG, WEBP, or GIF, up to 20 MB each</small>
             </label>
-
-            {imageError && (
-              <p className="ap-image-upload-error" role="alert">
-                {imageError}
-              </p>
-            )}
-
+            {imageError && <p className="ap-image-upload-error" role="alert">{imageError}</p>}
             {imagePreviews.length > 0 && (
               <div className="ap-image-preview-grid">
                 {imagePreviews.map((preview, index) => (
-                  <div
-                    className="ap-uploaded-image"
-                    key={`${imageFiles[index]?.name || "image"}-${index}`}
-                  >
-                    <img
-                      src={preview}
-                      alt={`Product preview ${index + 1}`}
-                    />
-
-                    {index === 0 ? (
-                      <span className="ap-main-image-label">First upload</span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="ap-make-main"
-                        onClick={() => onMakeMain(index)}
-                        disabled={saving}
-                      >
-                        Move first
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      className="ap-remove-image"
-                      onClick={() => onRemoveImage(index)}
-                      disabled={saving}
-                      aria-label={`Remove image ${index + 1}`}
-                    >
-                      ×
-                    </button>
+                  <div className="ap-uploaded-image" key={`${imageFiles[index]?.name || "image"}-${index}`}>
+                    <img src={preview} alt={`Product preview ${index + 1}`} />
+                    {index === 0 ? <span className="ap-main-image-label">First upload</span> : <button type="button" className="ap-make-main" onClick={() => onMakeMain(index)} disabled={saving}>Move first</button>}
+                    <button type="button" className="ap-remove-image" onClick={() => onRemoveImage(index)} disabled={saving} aria-label={`Remove image ${index + 1}`}>×</button>
                   </div>
                 ))}
               </div>
             )}
-
-            <small className="ap-image-upload-note">
-              Images are uploaded to the product image channel when you save.
-              The first uploaded image becomes the primary image if the product
-              does not already have one.
-            </small>
           </div>
+        </section>
 
-          <label>
-            Category
-            <select name="category" value={form.category} onChange={onChange}>
-              {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Availability
-            <select name="status" value={form.status} onChange={onChange}>
-              <option value="ready">Ready stock</option>
-              <option value="pre-order">Pre-order</option>
-            </select>
-          </label>
-
-          <label className="ap-form-full">
-            Colors
-            <input
-              name="colors"
-              value={form.colors}
-              onChange={onChange}
-              placeholder="Black, White, Navy Blue"
-              disabled={Boolean(editing)}
-            />
-            <small>
-              Separate colors with commas.
-              {editing
-                ? " Color changes are disabled while editing to protect existing inventory variants."
-                : ""}
-            </small>
-          </label>
-
-          <label className="ap-form-full">
-            Sizes
-            <input
-              name="sizes"
-              value={form.sizes}
-              onChange={onChange}
-              placeholder="S, M, L, XL"
-              disabled={Boolean(editing)}
-            />
-            <small>
-              Separate sizes with commas.
-              {editing
-                ? " Size changes are disabled while editing to protect existing inventory variants."
-                : ""}
-            </small>
-          </label>
-
-          {!editing && initialVariantRows.length > 0 && (
-            <div className="ap-initial-stock-section ap-form-full">
-              <div className="ap-initial-stock-heading">
-                <div>
-                  <strong>Initial variant stock</strong>
-                  <p>
-                    Enter the actual available physical quantity for each
-                    color-size combination. Enter 0 if none is available.
-                  </p>
-                </div>
-                <span>{initialVariantRows.length} variants</span>
-              </div>
-
-              <div className="ap-initial-stock-table-wrap">
-                <table className="ap-initial-stock-table">
-                  <thead>
-                    <tr>
-                      <th>Color</th>
-                      <th>Size</th>
-                      <th>Initial stock</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {initialVariantRows.map((variant) => (
-                      <tr key={variant.key}>
-                        <td>{variant.color}</td>
-                        <td>{variant.size}</td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            inputMode="numeric"
-                            placeholder="Enter quantity"
-                            value={initialStocks[variant.key] ?? ""}
-                            onChange={(event) =>
-                              onInitialStockChange(
-                                variant.key,
-                                event.target.value,
-                              )
-                            }
-                            disabled={saving}
-                            aria-label={`Initial stock for ${variant.color}, size ${variant.size}`}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div className="ap-form-checkboxes ap-form-full">
-            <label>
-              <input
-                type="checkbox"
-                name="isActive"
-                checked={form.isActive}
-                onChange={onChange}
-              />
-              Active listing
-            </label>
-
-            <label>
-              <input
-                type="checkbox"
-                name="isMock"
-                checked={form.isMock}
-                onChange={onChange}
-              />
-              Mock product
-            </label>
-          </div>
-
-          {error && (
-            <p className="ap-form-error ap-form-full" role="alert">
-              {error}
-            </p>
-          )}
-
-          <div className="ap-modal-footer ap-form-full">
-            <button
-              type="button"
-              className="ap-secondary-button"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="ap-primary-button"
-              disabled={saving}
-            >
-              {saving
-                ? "Saving…"
-                : editing
-                  ? "Save changes"
-                  : "Add product"}
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>
+        {error && <p className="ap-form-error" role="alert">{error}</p>}
+      </form>
+    </AdminModal>
   );
 }

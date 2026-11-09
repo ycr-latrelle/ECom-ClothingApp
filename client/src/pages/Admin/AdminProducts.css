@@ -1149,3 +1149,443 @@
     padding: 8px 6px;
   }
 }
+
+/* Layout for the current admin product screen */
+.admin-products .ap-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-products .ap-catalog-header > div {
+  min-width: 0;
+}
+
+.admin-products .ap-catalog-header h2 {
+  margin: 0;
+}
+
+.admin-products .ap-catalog-header p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.admin-products .admin-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.admin-products .ap-filter > span {
+  display: block;
+}
+
+.admin-products .ap-table-wrap {
+  display: block;
+}
+
+.admin-products .ap-product-identity {
+  cursor: default;
+}
+
+.admin-products .ap-product-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.admin-products .admin-form-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-products .admin-form-group,
+.admin-products .admin-form-full {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  color: #53616a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.admin-products .admin-form-full,
+.admin-products .ap-image-upload-section,
+.admin-products .ap-initial-stock-section,
+.admin-products .ap-form-error {
+  grid-column: 1 / -1;
+}
+
+.admin-products .admin-form-group input:not([type="checkbox"]),
+.admin-products .admin-form-group select,
+.admin-products .admin-form-full input:not([type="checkbox"]),
+.admin-products .admin-form-full select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid #e2e4e2;
+  border-radius: 3px;
+  background: white;
+  color: #263743;
+  font: inherit;
+  font-size: 11px;
+}
+
+.admin-products .admin-form-full small {
+  color: #92999e;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.admin-products .admin-checkbox-label {
+  margin-top: -6px;
+  color: #53616a;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.admin-products .ap-image-upload-heading strong {
+  color: #263743;
+  font-size: 11px;
+}
+
+.admin-products .ap-image-upload-heading p {
+  margin: 4px 0 0;
+  color: #858d92;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.admin-products .ap-image-upload-heading > span {
+  flex: 0 0 auto;
+  color: #7b838a;
+  font-size: 10px;
+}
+
+.admin-products .ap-form-error {
+  margin: 0;
+  color: #b44335;
+  font-size: 10px;
+}
+
+@media (max-width: 1100px) {
+  .admin-products .ap-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-products .ap-table-wrap {
+    display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-products .admin-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-products .ap-catalog-header {
+    align-items: flex-start;
+  }
+}
+
+/* Product form layout */
+.ap-modal.ap-form-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 760px);
+  overflow: hidden;
+  border: 1px solid rgba(23, 42, 57, .08);
+  border-radius: 8px;
+}
+
+.ap-form-modal .ap-modal-header {
+  flex: 0 0 auto;
+  padding: 21px 26px;
+  background: #fff;
+}
+
+.ap-form-modal .ap-modal-header h2 {
+  font-size: 22px;
+  letter-spacing: -.025em;
+}
+
+.ap-form-modal .ap-modal-header > div > p:last-child:not(.eyebrow) {
+  margin-bottom: 0;
+  font-size: 12px;
+}
+
+.ap-modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-products .ap-product-form {
+  gap: 14px;
+  padding: 20px 26px;
+}
+
+.admin-products .ap-form-section {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 19px;
+  border: 1px solid #e8e8e5;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.admin-products .ap-form-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #ededeb;
+}
+
+.ap-form-section-header > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f0f2f2;
+  color: #536d7e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ap-form-section-header h3 {
+  margin: 0;
+  color: #172a39;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ap-form-section-header p {
+  margin: 4px 0 0;
+  color: #858d92;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-products .admin-form-grid {
+  gap: 16px;
+}
+
+.admin-products .admin-form-group label {
+  color: #53616a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.admin-products .admin-form-group input:not([type="checkbox"]),
+.admin-products .admin-form-group select,
+.admin-products .admin-form-full input:not([type="checkbox"]),
+.admin-products .admin-form-full select {
+  min-height: 42px;
+  border-color: #dedfdd;
+  border-radius: 4px;
+  transition: border-color .16s, box-shadow .16s;
+}
+
+.admin-products .admin-form-group input:focus,
+.admin-products .admin-form-group select:focus,
+.admin-products .admin-form-full input:focus {
+  border-color: #536d7e;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(83, 109, 126, .12);
+}
+
+.admin-products .ap-listing-toggle {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  gap: 11px;
+  min-height: 42px;
+  padding: 8px 11px;
+  border: 1px solid #e8e8e5;
+  border-radius: 4px;
+  background: #fafaf8;
+  cursor: pointer;
+}
+
+.ap-listing-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #172a39;
+}
+
+.ap-listing-toggle-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.ap-listing-toggle-copy strong {
+  color: #263743;
+  font-size: 11px;
+}
+
+.ap-listing-toggle-copy small {
+  color: #858d92;
+  font-size: 9px;
+}
+
+.admin-products .ap-variant-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ap-initial-stock-section {
+  gap: 16px;
+  padding: 16px;
+  border-color: #e8e8e5;
+  border-radius: 5px;
+  background: #fafaf8;
+}
+
+.ap-form-section-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #8a9297;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.ap-initial-stock-heading strong {
+  color: #172a39;
+  font-size: 13px;
+}
+
+.ap-initial-stock-heading p {
+  font-size: 11px;
+}
+
+.ap-stock-variant-count {
+  color: #536d7e;
+  font-size: 10px !important;
+}
+
+.ap-stock-bulk-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid #e8e8e5;
+  border-radius: 4px;
+  background: #fff;
+  color: #53616a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ap-stock-bulk-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #858d92;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.ap-stock-bulk-control input {
+  width: 105px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid #dedfdd;
+  border-radius: 4px;
+  color: #263743;
+  font: inherit;
+}
+
+.ap-initial-stock-table {
+  background: white;
+}
+
+.ap-initial-stock-table th,
+.ap-initial-stock-table td {
+  padding: 10px 12px;
+  border-bottom-color: #ededeb;
+  font-size: 11px;
+}
+
+.ap-initial-stock-table th {
+  color: #858d92;
+  font-size: 9px;
+}
+
+.ap-initial-stock-table td:last-child {
+  width: 190px;
+}
+
+.ap-initial-stock-table input {
+  min-width: 100px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-color: #dedfdd;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.ap-stock-empty {
+  padding: 15px;
+  border: 1px dashed #d8dcda;
+  border-radius: 4px;
+  color: #858d92;
+  font-size: 11px;
+  text-align: center;
+}
+
+.admin-products .ap-image-upload-section {
+  padding: 14px;
+  border-color: #e8e8e5;
+  background: #fafaf8;
+}
+
+.admin-products .ap-modal-footer {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 15px 26px;
+  background: #fff;
+}
+
+.admin-products .ap-modal-footer .admin-btn {
+  min-height: 39px;
+  padding: 8px 18px;
+}
+
+@media (max-width: 600px) {
+  .admin-products .ap-product-form {
+    padding: 14px;
+  }
+
+  .admin-products .ap-form-section {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .admin-products .admin-form-grid,
+  .admin-products .ap-variant-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ap-stock-bulk-field {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ap-form-modal .ap-modal-header,
+  .admin-products .ap-modal-footer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}

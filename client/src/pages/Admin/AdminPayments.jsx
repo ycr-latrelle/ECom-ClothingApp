@@ -6,7 +6,6 @@ import {
   fetchAdminPaymentReceipt,
   verifyAdminPayment,
   rejectAdminPayment,
-  AdminPaymentsApiError,
 } from '../../api/adminPaymentApi.js';
 import './AdminPayments.css';
 
@@ -101,6 +100,7 @@ export default function AdminPayments() {
     setReloadKey((value) => value + 1);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) {
       setLoadStatus('error');
@@ -134,6 +134,7 @@ export default function AdminPayments() {
       active = false;
     };
   }, [user, reloadKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     return () => {

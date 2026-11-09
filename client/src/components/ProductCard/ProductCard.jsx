@@ -12,6 +12,9 @@ export default function ProductCard({
   category,
   status,
   sizes = [],
+  colors = [],
+  isInStock = true,
+  availableVariants = [],
 }) {
   const { addItem, openQuickCheckout } = useCart();
   const preorder = status === 'pre-order';
@@ -22,12 +25,24 @@ export default function ProductCard({
   useEffect(() => () => clearTimeout(timer.current), []);
 
   // Sizes come from the product record returned by the API.
-  const item = { id, name, price, image, category, status, sizes };
+  const unavailable = !preorder && !isInStock;
+  const item = {
+    id,
+    name,
+    price,
+    image,
+    category,
+    status,
+    sizes,
+    colors,
+    isInStock,
+    availableVariants,
+  };
 
   const handleCheckout = () => openQuickCheckout(item, 'checkout');
 
   const handleAdd = () => {
-    if (sizes.length > 0) {
+    if (sizes.length > 0 || colors.length > 0) {
       openQuickCheckout(item, 'cart');
       return;
     }
@@ -55,7 +70,7 @@ export default function ProductCard({
       <p className="product-card-price">{formatPeso(price)}</p>
 
       <span className={`product-tag ${preorder ? 'is-preorder' : 'is-ready'}`}>
-        {preorder ? 'Pre-order' : 'Ready stock'}
+        {preorder ? 'Pre-order' : unavailable ? 'Out of stock' : 'Ready stock'}
       </span>
 
       <div className="product-card-actions">
@@ -63,6 +78,7 @@ export default function ProductCard({
           type="button"
           className={`product-card-add ${added ? 'is-added' : ''}`}
           onClick={handleAdd}
+          disabled={unavailable}
         >
           <span aria-live="polite">
             {added ? (
@@ -73,7 +89,7 @@ export default function ProductCard({
                 Added
               </>
             ) : (
-              'Add to cart'
+              unavailable ? 'Out of stock' : 'Add to cart'
             )}
           </span>
         </button>
@@ -82,6 +98,7 @@ export default function ProductCard({
           type="button"
           className="product-card-checkout"
           onClick={handleCheckout}
+          disabled={unavailable}
         >
           Check out
         </button>

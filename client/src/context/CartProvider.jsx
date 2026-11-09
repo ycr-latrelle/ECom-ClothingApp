@@ -5,7 +5,10 @@ import { aboutContent } from '../data/aboutContent.js';
 
 const STORAGE_KEY = 'thread-theory-cart';
 
-const makeKey = (id, size) => (size ? `${id}::${size}` : id);
+const makeKey = (id, color, size) =>
+  color || size
+    ? `${id}::${color ?? ''}::${size ?? ''}`
+    : id;
 const clamp = (qty) => Math.min(MAX_QTY, qty);
 
 function load() {
@@ -15,7 +18,7 @@ function load() {
 
     return saved.map((item) => ({
       ...item,
-      key: item.key ?? makeKey(item.id, item.size),
+      key: item.key ?? makeKey(item.id, item.color, item.size),
       qty: clamp(item.qty),
       selected: item.selected ?? true,
     }));
@@ -49,7 +52,7 @@ function migrateCartItems(items, products) {
     const updatedItem = {
       ...item,
       id,
-      key: makeKey(id, item.size),
+      key: makeKey(id, item.color, item.size),
       name: product.name,
       price: Number(product.price),
       image: product.image,
@@ -219,7 +222,7 @@ export default function CartProvider({ children }) {
         dispatch({
           type: 'add',
           qty,
-          item: { ...item, key: makeKey(item.id, item.size) },
+          item: { ...item, key: makeKey(item.id, item.color, item.size) },
         }),
       increase: (key) => dispatch({ type: 'increase', key }),
       decrease: (key) => dispatch({ type: 'decrease', key }),

@@ -101,6 +101,7 @@ export default function AdminShipments() {
 
   const [selectedOrderId, setSelectedOrderId] = useState(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) {
       setStatus('error');
@@ -129,6 +130,7 @@ export default function AdminShipments() {
       cancelled = true;
     };
   }, [user, reloadKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const summary = useMemo(() => ({
     total: shipments.length,

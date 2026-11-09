@@ -16,9 +16,15 @@ function Panel({ item, mode }) {
 
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState(null);
+  const [color, setColor] = useState(null);
   const [needSize, setNeedSize] = useState(false);
+  const [needColor, setNeedColor] = useState(false);
 
   const sizes = Array.isArray(item.sizes) ? item.sizes : [];
+  const colors = Array.isArray(item.colors) ? item.colors : [];
+  const availableVariants = Array.isArray(item.availableVariants)
+    ? item.availableVariants
+    : null;
   const addMode = mode === 'cart';
   const preorder = item.status === 'pre-order';
   const total = item.price * qty;
@@ -33,11 +39,30 @@ function Panel({ item, mode }) {
     setNeedSize(false);
   };
 
+  const isVariantAvailable = (selectedColor, selectedSize) => {
+    if (preorder || availableVariants === null) return item.isInStock !== false;
+    return availableVariants.some(
+      (variant) =>
+        variant.isAvailable &&
+        (selectedColor === null ||
+          String(variant.color || '').toLowerCase() === selectedColor.toLowerCase()) &&
+        (selectedSize === null ||
+          String(variant.size || '').toLowerCase() === selectedSize.toLowerCase()),
+    );
+  };
+
   const confirm = () => {
+    if (colors.length > 0 && !color) {
+      setNeedColor(true);
+      return;
+    }
+
     if (sizes.length > 0 && !size) {
       setNeedSize(true);
       return;
     }
+
+    if (!isVariantAvailable(color, size)) return;
 
     if (addMode) {
       addItem(
@@ -48,6 +73,7 @@ function Panel({ item, mode }) {
           image: item.image,
           category: item.category,
           status: item.status,
+          color,
           size,
         },
         qty,
@@ -57,7 +83,10 @@ function Panel({ item, mode }) {
       return;
     }
 
-    const key = size ? `${item.id}::${size}` : item.id;
+    const key =
+      color || size
+        ? `${item.id}::${color ?? ''}::${size ?? ''}`
+        : item.id;
 
     const directItem = {
       id: item.id,
@@ -66,6 +95,7 @@ function Panel({ item, mode }) {
       price: item.price,
       image: item.image,
       status: item.status,
+      color,
       size,
       qty,
     };
@@ -172,9 +202,42 @@ function Panel({ item, mode }) {
           </div>
         </div>
 
+        {colors.length > 0 && (
+          <fieldset className={`quick-sizes ${needColor ? 'is-missing' : ''}`}>
+            <legend>
+              <span>Color</span>
+              {color && <span className="quick-selected-value">{color}</span>}
+            </legend>
+            <div>
+              {colors.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={color === value}
+                  className={color === value ? 'is-active' : ''}
+                  disabled={!isVariantAvailable(value, size)}
+                  onClick={() => {
+                    setColor(value);
+                    setNeedColor(false);
+                    if (size && !isVariantAvailable(value, size)) {
+                      setSize(null);
+                    }
+                  }}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+            {needColor && <p role="alert">Select a color to continue.</p>}
+          </fieldset>
+        )}
+
         {sizes.length > 0 && (
           <fieldset className={`quick-sizes ${needSize ? 'is-missing' : ''}`}>
-            <legend>Size</legend>
+            <legend>
+              <span>Size</span>
+              {size && <span className="quick-selected-value">{size}</span>}
+            </legend>
 
             <div>
               {sizes.map((value) => (
@@ -183,6 +246,7 @@ function Panel({ item, mode }) {
                   type="button"
                   aria-pressed={size === value}
                   className={size === value ? 'is-active' : ''}
+                  disabled={!isVariantAvailable(color, value)}
                   onClick={() => pickSize(value)}
                 >
                   {value}

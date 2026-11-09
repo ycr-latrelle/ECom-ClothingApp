@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using server.Api.Data;
 using server.Api.Models;
-using Microsoft.AspNetCore.OutputCaching;
 
 namespace server.Api.Controllers;
 
@@ -18,9 +17,9 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    [OutputCache(PolicyName = "PublicProducts")]
+    [ProducesResponseType<IReadOnlyList<ProductResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProductResponse>>> Get(
-    CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var products = await _repository.GetActiveAsync(cancellationToken);
         return Ok(products);

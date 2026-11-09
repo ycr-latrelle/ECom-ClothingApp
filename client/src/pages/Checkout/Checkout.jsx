@@ -73,6 +73,7 @@ export default function Checkout() {
       items: items.map((item) => ({
         productId: item.id,
         quantity: Number(item.qty),
+        color: item.color || null,
         size: item.size || null,
       })),
     };
@@ -90,11 +91,12 @@ export default function Checkout() {
         paymentStatus: result.paymentStatus,
         isTest: result.isTest !== false,
         createdAt: result.createdAt,
-        items: items.map(({ id, name, price, image, size, qty }) => ({
+        items: items.map(({ id, name, price, image, color, size, qty }) => ({
           id,
           name,
           price,
           image,
+          color,
           size,
           qty,
         })),
@@ -302,11 +304,11 @@ export default function Checkout() {
 
           <ul className="checkout-items">
             {items.map((item) => (
-              <li key={item.key ?? `${item.id}-${item.size ?? 'one-size'}`}>
+              <li key={item.key ?? `${item.id}-${item.color ?? ''}-${item.size ?? 'one-size'}`}>
                 <ProductImage src={item.image} alt="" />
 
                 <div>
-                  <strong>{item.name}</strong>
+                  {item.color && <span>Color {item.color}</span>}
                   {item.size && <span>Size {item.size}</span>}
                   <span>Qty {item.qty}</span>
                 </div>
